@@ -1,195 +1,33 @@
 # Zotero Plugin Template
 
 [![zotero target version](https://img.shields.io/badge/Zotero-7-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
-[![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github)](https://github.com/windingwind/zotero-plugin-template)
 
-This is a plugin template for [Zotero](https://www.zotero.org/).
+[![bibsonomy target version](https://img.shields.io/badge/Bibsonomy-4-blue?style=flat-square&logoColor=CC2936&logo=data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIGlkPSJhIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3MDIuMzYgODYzLjUxIj48ZGVmcz48c3R5bGU+LmIsLmN7c3Ryb2tlLXdpZHRoOjBweDt9LmN7ZmlsbDojYTQwMDNkO308L3N0eWxlPjwvZGVmcz48cGF0aCBjbGFzcz0iYiIgZD0iTTExOC43LDEwNi45NWMyNi4wMSwwLDQ3LjA5LDIxLjA4LDQ3LjA5LDQ3LjA5cy0yMS4wOCw0Ny4wOS00Ny4wOSw0Ny4wOS00Ny4wOS0yMS4wOC00Ny4wOS00Ny4wOSwyMS4wOC00Ny4wOSw0Ny4wOS00Ny4wOU0xMTguNyw4OC45NWMtMzUuODksMC02NS4wOSwyOS4yLTY1LjA5LDY1LjA5czI5LjIsNjUuMDksNjUuMDksNjUuMDksNjUuMDktMjkuMiw2NS4wOS02NS4wOS0yOS4yLTY1LjA5LTY1LjA5LTY1LjA5aDBaIi8+PHBhdGggY2xhc3M9ImIiIGQ9Ik0zOTUuNTcsMTQ2LjljMjYuMDEsMCw0Ny4wOSwyMS4wOCw0Ny4wOSw0Ny4wOXMtMjEuMDgsNDcuMDktNDcuMDksNDcuMDktNDcuMDktMjEuMDgtNDcuMDktNDcuMDksMjEuMDgtNDcuMDksNDcuMDktNDcuMDlNMzk1LjU3LDEyOC45Yy0zNS44OSwwLTY1LjA5LDI5LjItNjUuMDksNjUuMDlzMjkuMiw2NS4wOSw2NS4wOSw2NS4wOSw2NS4wOS0yOS4yLDY1LjA5LTY1LjA5LTI5LjItNjUuMDktNjUuMDktNjUuMDloMFoiLz48cGF0aCBjbGFzcz0iYiIgZD0iTTYxNC45MywxOGMyNi4wMSwwLDQ3LjA5LDIxLjA4LDQ3LjA5LDQ3LjA5cy0yMS4wOCw0Ny4wOS00Ny4wOSw0Ny4wOS00Ny4wOS0yMS4wOC00Ny4wOS00Ny4wOSwyMS4wOC00Ny4wOSw0Ny4wOS00Ny4wOU02MTQuOTMsMGMtMzUuODksMC02NS4wOSwyOS4yLTY1LjA5LDY1LjA5czI5LjIsNjUuMDksNjUuMDksNjUuMDksNjUuMDktMjkuMiw2NS4wOS02NS4wOVM2NTAuODIsMCw2MTQuOTMsMGgwWiIvPjxwYXRoIGNsYXNzPSJiIiBkPSJNNjE0LjkzLDI3NC42NGMyNi4wMSwwLDQ3LjA5LDIxLjA4LDQ3LjA5LDQ3LjA5cy0yMS4wOCw0Ny4wOS00Ny4wOSw0Ny4wOS00Ny4wOS0yMS4wOC00Ny4wOS00Ny4wOSwyMS4wOC00Ny4wOSw0Ny4wOS00Ny4wOU02MTQuOTMsMjU2LjY0Yy0zNS44OSwwLTY1LjA5LDI5LjItNjUuMDksNjUuMDlzMjkuMiw2NS4wOSw2NS4wOSw2NS4wOSw2NS4wOS0yOS4yLDY1LjA5LTY1LjA5LTI5LjItNjUuMDktNjUuMDktNjUuMDloMFoiLz48cGF0aCBjbGFzcz0iYyIgZD0iTTM5NS41Nyw1MTAuNDljLTMwLjkzLDAtNTYuMDktMjUuMTYtNTYuMDktNTYuMDlzMjUuMTYtNTYuMDksNTYuMDktNTYuMDksNTYuMDksMjUuMTYsNTYuMDksNTYuMDktMjUuMTYsNTYuMDktNTYuMDksNTYuMDlaIi8+PHBhdGggY2xhc3M9ImIiIGQ9Ik0zOTUuNTcsNDA3LjNjMjYuMDEsMCw0Ny4wOSwyMS4wOCw0Ny4wOSw0Ny4wOXMtMjEuMDgsNDcuMDktNDcuMDksNDcuMDktNDcuMDktMjEuMDgtNDcuMDktNDcuMDksMjEuMDgtNDcuMDksNDcuMDktNDcuMDlNMzk1LjU3LDM4OS4zYy0zNS44OSwwLTY1LjA5LDI5LjItNjUuMDksNjUuMDlzMjkuMiw2NS4wOSw2NS4wOSw2NS4wOSw2NS4wOS0yOS4yLDY1LjA5LTY1LjA5LTI5LjItNjUuMDktNjUuMDktNjUuMDloMFoiLz48cGF0aCBjbGFzcz0iYiIgZD0iTTY1LjA5LDYzMS4wNWMyNi4wMSwwLDQ3LjA5LDIxLjA4LDQ3LjA5LDQ3LjA5cy0yMS4wOCw0Ny4wOS00Ny4wOSw0Ny4wOS00Ny4wOS0yMS4wOC00Ny4wOS00Ny4wOSwyMS4wOC00Ny4wOSw0Ny4wOS00Ny4wOU02NS4wOSw2MTMuMDVjLTM1Ljg5LDAtNjUuMDksMjkuMi02NS4wOSw2NS4wOXMyOS4yLDY1LjA5LDY1LjA5LDY1LjA5LDY1LjA5LTI5LjIsNjUuMDktNjUuMDktMjkuMi02NS4wOS02NS4wOS02NS4wOWgwWiIvPjxwYXRoIGNsYXNzPSJiIiBkPSJNMjg4Ljg1LDYyMi4yMmMyNi4wMSwwLDQ3LjA5LDIxLjA4LDQ3LjA5LDQ3LjA5cy0yMS4wOCw0Ny4wOS00Ny4wOSw0Ny4wOS00Ny4wOS0yMS4wOC00Ny4wOS00Ny4wOSwyMS4wOC00Ny4wOSw0Ny4wOS00Ny4wOU0yODguODUsNjA0LjIyYy0zNS44OSwwLTY1LjA5LDI5LjItNjUuMDksNjUuMDlzMjkuMiw2NS4wOSw2NS4wOSw2NS4wOSw2NS4wOS0yOS4yLDY1LjA5LTY1LjA5LTI5LjItNjUuMDktNjUuMDktNjUuMDloMFoiLz48cGF0aCBjbGFzcz0iYiIgZD0iTTYzNy4yNiw3NTEuMzJjMjYuMDEsMCw0Ny4wOSwyMS4wOCw0Ny4wOSw0Ny4wOXMtMjEuMDgsNDcuMDktNDcuMDksNDcuMDktNDcuMDktMjEuMDgtNDcuMDktNDcuMDksMjEuMDgtNDcuMDksNDcuMDktNDcuMDlNNjM3LjI2LDczMy4zMmMtMzUuODksMC02NS4wOSwyOS4yLTY1LjA5LDY1LjA5czI5LjIsNjUuMDksNjUuMDksNjUuMDksNjUuMDktMjkuMiw2NS4wOS02NS4wOS0yOS4yLTY1LjA5LTY1LjA5LTY1LjA5aDBaIi8+PHJlY3QgY2xhc3M9ImIiIHg9IjQ5Ni4zOCIgeT0iNjguMDMiIHdpZHRoPSIxOS4zNiIgaGVpZ2h0PSIxMjcuNDIiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDM1Ni4zMiAtMzY5LjI5KSByb3RhdGUoNTguNzcpIi8+PHJlY3QgY2xhc3M9ImIiIHg9IjQ5NS41NyIgeT0iMzI0LjQ2IiB3aWR0aD0iMTkuMzYiIGhlaWdodD0iMTI3LjQyIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg1NzUuMiAtMjQ1LjEyKSByb3RhdGUoNTguNzcpIi8+PHJlY3QgY2xhc3M9ImIiIHg9IjI0Ni41OSIgeT0iMTYyLjE3IiB3aWR0aD0iMTkuMzYiIGhlaWdodD0iMjg2LjA2IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg2NTEuODUgMzUzLjYpIHJvdGF0ZSgxMzcpIi8+PHJlY3QgY2xhc3M9ImIiIHg9IjM4NS44OSIgeT0iMjU4LjAyIiB3aWR0aD0iMTkuMzYiIGhlaWdodD0iMTM1LjAxIi8+PHJlY3QgY2xhc3M9ImIiIHg9IjYwNS4yNSIgeT0iMTI2LjQ5IiB3aWR0aD0iMTkuMzYiIGhlaWdodD0iMTM1LjAxIi8+PHJlY3QgY2xhc3M9ImIiIHg9IjMzMi41OCIgeT0iNDkzLjQiIHdpZHRoPSIxOS4zNiIgaGVpZ2h0PSIxMzUuMDEiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDI4OS41NyAtOTQuMDYpIHJvdGF0ZSgyNi43OSkiLz48cmVjdCBjbGFzcz0iYiIgeD0iMjIzLjQ0IiB5PSI0MjIuNjEiIHdpZHRoPSIxOS4zNiIgaGVpZ2h0PSIyODUuMDMiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDU3MC4wNCA1NS4wMykgcm90YXRlKDU1Ljg2KSIvPjxyZWN0IGNsYXNzPSJiIiB4PSI1MDguMDgiIHk9IjQ3Ny43NyIgd2lkdGg9IjE5LjM2IiBoZWlnaHQ9IjMwMS41MyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTMwMy40MiA4NDIuNzIpIHJvdGF0ZSgxNDQuNzMpIi8+PC9zdmc+)](https://www.bibsonomy.org)
 
-[English](README.md) | [简体中文](doc/README-zhCN.md)
-
-[📖 Plugin Development Documentation](https://zotero.yuque.com/books/share/8d230829-6004-4934-b4c6-685a7001bfa0/vec88d) (Chinese, outdated)
-
-[📖 Plugin Development Documentation for Zotero 7](https://www.zotero.org/support/dev/zotero_7_for_developers)
-
-[🛠️ Zotero Plugin Toolkit](https://github.com/windingwind/zotero-plugin-toolkit) | [API Documentation](https://github.com/windingwind/zotero-plugin-toolkit/blob/master/docs/zotero-plugin-toolkit.md)
-
-[ℹ️ Zotero Type Definitions](https://github.com/windingwind/zotero-types)
-
-[📜 Zotero Source Code](https://github.com/zotero/zotero)
-
-[📌 Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template) (This repo)
-
-> [!tip]
-> 👁 Watch this repo so that you can be notified whenever there are fixes & updates.
-
-## Plugins built with this template
-
-[![GitHub Repo stars](https://img.shields.io/github/stars/windingwind/zotero-better-notes?label=zotero-better-notes&style=flat-square)](https://github.com/windingwind/zotero-better-notes)
-[![GitHub Repo stars](https://img.shields.io/github/stars/windingwind/zotero-pdf-preview?label=zotero-pdf-preview&style=flat-square)](https://github.com/windingwind/zotero-pdf-preview)
-[![GitHub Repo stars](https://img.shields.io/github/stars/windingwind/zotero-pdf-translate?label=zotero-pdf-translate&style=flat-square)](https://github.com/windingwind/zotero-pdf-translate)
-[![GitHub Repo stars](https://img.shields.io/github/stars/windingwind/zotero-tag?label=zotero-tag&style=flat-square)](https://github.com/windingwind/zotero-tag)
-[![GitHub Repo stars](https://img.shields.io/github/stars/iShareStuff/ZoteroTheme?label=zotero-theme&style=flat-square)](https://github.com/iShareStuff/ZoteroTheme)
-[![GitHub Repo stars](https://img.shields.io/github/stars/MuiseDestiny/zotero-reference?label=zotero-reference&style=flat-square)](https://github.com/MuiseDestiny/zotero-reference)
-[![GitHub Repo stars](https://img.shields.io/github/stars/MuiseDestiny/zotero-citation?label=zotero-citation&style=flat-square)](https://github.com/MuiseDestiny/zotero-citation)
-[![GitHub Repo stars](https://img.shields.io/github/stars/MuiseDestiny/ZoteroStyle?label=zotero-style&style=flat-square)](https://github.com/MuiseDestiny/ZoteroStyle)
-[![GitHub Repo stars](https://img.shields.io/github/stars/volatile-static/Chartero?label=Chartero&style=flat-square)](https://github.com/volatile-static/Chartero)
-[![GitHub Repo stars](https://img.shields.io/github/stars/l0o0/tara?label=tara&style=flat-square)](https://github.com/l0o0/tara)
-[![GitHub Repo stars](https://img.shields.io/github/stars/redleafnew/delitemwithatt?label=delitemwithatt&style=flat-square)](https://github.com/redleafnew/delitemwithatt)
-[![GitHub Repo stars](https://img.shields.io/github/stars/redleafnew/zotero-updateifsE?label=zotero-updateifsE&style=flat-square)](https://github.com/redleafnew/zotero-updateifsE)
-[![GitHub Repo stars](https://img.shields.io/github/stars/northword/zotero-format-metadata?label=zotero-format-metadata&style=flat-square)](https://github.com/northword/zotero-format-metadata)
-[![GitHub Repo stars](https://img.shields.io/github/stars/inciteful-xyz/inciteful-zotero-plugin?label=inciteful-zotero-plugin&style=flat-square)](https://github.com/inciteful-xyz/inciteful-zotero-plugin)
-[![GitHub Repo stars](https://img.shields.io/github/stars/MuiseDestiny/zotero-gpt?label=zotero-gpt&style=flat-square)](https://github.com/MuiseDestiny/zotero-gpt)
-[![GitHub Repo stars](https://img.shields.io/github/stars/zoushucai/zotero-journalabbr?label=zotero-journalabbr&style=flat-square)](https://github.com/zoushucai/zotero-journalabbr)
-[![GitHub Repo stars](https://img.shields.io/github/stars/MuiseDestiny/zotero-figure?label=zotero-figure&style=flat-square)](https://github.com/MuiseDestiny/zotero-figure)
-[![GitHub Repo stars](https://img.shields.io/github/stars/l0o0/jasminum?label=jasminum&style=flat-square)](https://github.com/l0o0/jasminum)
-[![GitHub Repo stars](https://img.shields.io/github/stars/lifan0127/ai-research-assistant?label=ai-research-assistant&style=flat-square)](https://github.com/lifan0127/ai-research-assistant)
-[![GitHub Repo stars](https://img.shields.io/github/stars/daeh/zotero-markdb-connect?label=zotero-markdb-connect&style=flat-square)](https://github.com/daeh/zotero-markdb-connect)
-
-If you are using this repo, I recommended that you put the following badge on your README:
 
 [![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github)](https://github.com/windingwind/zotero-plugin-template)
 
-```md
-[![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github)](https://github.com/windingwind/zotero-plugin-template)
-```
+This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seemlessly with [BibSonomy](https://www.bibsonomy.org/).
 
 ## Features
 
-- Event-driven, functional programming, under extensive skeleton;
-- Simple and user-friendly, works out-of-the-box.
-- ⭐ [New!] Auto hot reload! Whenever the source code is modified, automatically compile and reload. [See here→](#auto-hot-reload)
-- Abundant examples in `src/modules/examples.ts`, covering most of the commonly used APIs in plugins (using [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit));
-- TypeScript support:
-  - Full type definition support for the whole Zotero project, which is written in JavaScript (using [zotero-types](https://github.com/windingwind/zotero-types));
-  - Global variables and environment setup;
-- Plugin develop/build/release workflow:
-  - Automatically generate/update plugin id/version, update configrations, and set environment variables (`development` / `production`);
-  - Automatically build and reload code in Zotero;
-  - Automatically release to GitHub (using [release-it](https://github.com/release-it/release-it));
-- Prettier and ES Lint integration.
 
-> [!warning]
-> The localization system is upgraded (`dtd` is deprecated and we do not use `.properties` anymore). Only supports Zotero 7.0.0-beta.12 or higher now. If you want to support Zotero 6, you may need to use `dtd`, `properties`, and `ftl` at the same time. See the staled branch `zotero6-bootstrap`.
-
-## Examples
-
-This repo provides examples for [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit) APIs.
-
-Search `@example` in `src/examples.ts`. The examples are called in `src/hooks.ts`.
-
-### Basic Examples
-
-- registerNotifier
-- registerPrefs, unregisterPrefs
-
-### Shortcut Keys Examples
-
-- registerShortcuts
-- exampleShortcutLargerCallback
-- exampleShortcutSmallerCallback
-- exampleShortcutConflictionCallback
-
-### UI Examples
-
-![image](https://user-images.githubusercontent.com/33902321/211739774-cc5c2df8-5fd9-42f0-9cdf-0f2e5946d427.png)
-
-- registerStyleSheet(the official make-it-red example)
-- registerRightClickMenuItem
-- registerRightClickMenuPopup
-- registerWindowMenuWithSeprator
-- registerExtraColumn
-- registerExtraColumnWithCustomCell
-- registerCustomItemBoxRow
-- registerLibraryTabPanel
-- registerReaderTabPanel
-
-### Preference Pane Examples
-
-![image](https://user-images.githubusercontent.com/33902321/211737987-cd7c5c87-9177-4159-b975-dc67690d0490.png)
-
-- Preferences bindings
-- UI Events
-- Table
-- Locale
-
-See [`src/modules/preferenceScript.ts`](./src/modules/preferenceScript.ts)
-
-### HelperExamples
-
-![image](https://user-images.githubusercontent.com/33902321/215119473-e7d0d0ef-6d96-437e-b989-4805ffcde6cf.png)
-
-- dialogExample
-- clipboardExample
-- filePickerExample
-- progressWindowExample
-- vtableExample(See Preference Pane Examples)
-
-### PromptExamples
-
-An Obsidian-style prompt(popup command input) module. It accepts text command to run callback, with optional display in the popup.
-
-Activate with `Shift+P`.
-
-![image](https://user-images.githubusercontent.com/33902321/215120009-e7c7ed27-33a0-44fe-b021-06c272481a92.png)
-
-- registerAlertPromptExample
-
-## Quick Start Guide
+## Developement Quick Start Guide
 
 ### 0 Requirement
 
 1. Install a beta version of Zotero: <https://www.zotero.org/support/beta_builds>
 2. Install [Node.js](https://nodejs.org/en/) and [Git](https://git-scm.com/)
+3. Clone this repo
 
-> [!note]
-> This guide assumes that you have an initial understanding of the basic structure and workings of the Zotero plugin. If you don't, please refer to the [documentation](https://www.zotero.org/support/dev/zotero_7_for_developers) and official plugin examples [Make It Red](https://github.com/zotero/make-it-red) first.
-
-### 1 Creat Your Repo
-
-1. Click `Use this template`
-2. Git clone your new repo
-   <details >
-   <summary>💡 Start with GitHub Codespace</summary>
-
-   _GitHub CodeSpace_ enables you getting started without the need to download code/IDE/dependencies locally.
-
-   Replace the steps above and build you first plugin in 30 seconds!
-
-   - Goto top of the [homepage](https://github.com/windingwind/zotero-plugin-template), click the green button `Use this template`, click `Open in codespace`. You may need to login to your GitHub account.
-   - Wait for codespace to load.
-
-   </details>
-
-3. Enter the repo folder
-
-### 2 Config Template Settings and Enviroment
-
-1. Modify the settings in `./package.json`, including:
-
-   ```json5
-   {
-     version: "", // to 0.0.0
-     author: "",
-     description: "",
-     homepage: "",
-     config: {
-       addonName: "", // name to be displayed in the plugin manager
-       addonID: "", // ID to avoid conflict. IMPORTANT!
-       addonRef: "", // e.g. Element ID prefix
-       addonInstance: "", // the plugin's root instance: Zotero.${addonInstance}
-       prefsPrefix: "extensions.zotero.${addonRef}", // the prefix of prefs
-       releasePage: "", // URL to releases
-       updateJSON: "", // URL to update.json
-     },
-   }
+   ```sh
+   git clone TODO
+   cd zotero-plugin-template
    ```
 
-   > [!warning]
-   > Be careful to set the addonID and addonRef to avoid conflict.
+### 1 Setup Zotero Dev Enviroment
 
-   If you need to host your XPI packages outside of GitHub, remove `releasePage` and add `updateLink` with the value set to your XPI download URL.
-
-2. Copy zotero command line config file. Modify the commands that starts your installation of the beta Zotero.
+1. Copy zotero command line config file. Modify the commands that starts your installation of the beta Zotero.
 
    > (Optional) Do this only once: Start the beta Zotero with `/path/to/zotero -p`. Create a new profile and use it as your development profile.
    > Put the path of the profile into the `profilePath` in `zotero-cmd.json` to specify which profile to use.
@@ -199,11 +37,9 @@ Activate with `Shift+P`.
    vim ./scripts/zotero-cmd.json
    ```
 
-3. Install dependencies with `npm install`
+2. Install dependencies with `npm install`
 
-   > If you are using `pnpm` as the package manager for your project, you need to add `public-hoist-pattern[]=*@types/bluebird*` to `.npmrc`, see <https://github.com/windingwind/zotero-types?tab=readme-ov-file#usage>.
-
-### 3 Coding
+### 2 Coding
 
 Start development server with `npm start`, it will:
 
@@ -213,34 +49,6 @@ Start development server with `npm start`, it will:
 - Watch `src/**` and `addon/**`.
   - If `src/**` changed, run esbuild and reload
   - If `addon/**` has changed, rebuild the plugin (in development mode) and reload
-
-#### Auto Hot Reload
-
-Tired of endless restarting? Forget about it!
-
-1. Run `npm start`.
-2. Coding. (Yes, that's all)
-
-When file changes are detected in `src` or `addon`, the plugin will be automatically compiled and reloaded.
-
-<details style="text-indent: 2em">
-<summary>💡 Steps to add this feature to an existing plugin</summary>
-
-1. Copy `scripts/**.mjs`
-2. Copy `server`, `build`, and `stop` commands in `package.json`
-3. Run `npm install --save-dev chokidar`
-4. Done.
-
-</details>
-
-#### Debug in Zotero
-
-You can also:
-
-- Test code snipastes in Tools -> Developer -> Run Javascript;
-- Debug output with `Zotero.debug()`. Find the outputs in Help->Debug Output Logging->View Output;
-- Debug UI. Zotero is built on the Firefox XUL framework. Debug XUL UI with software like [XUL Explorer](https://udn.realityripple.com/docs/Archive/Mozilla/XUL_Explorer).
-  > XUL Documentation: <http://www.devdoc.net/web/developer.mozilla.org/en-US/docs/XUL.html>
 
 ### 4 Build
 
@@ -288,56 +96,6 @@ The template defines `prerelease` as the beta version of the plugin, when you se
 > [!warning]
 > Strictly, distinguishing between Zotero 6 and Zotero 7 compatible plugin versions should be done by configuring `applications.zotero.strict_min_version` in `addons.__addonID__.updates[]` of `update.json` respectively, so that Zotero recognizes it properly, see <https://www.zotero.org/support/dev/zotero_7_for_developers#updaterdf_updatesjson>.
 
-## Details
-
-### About Hooks
-
-> See also [`src/hooks.ts`](https://github.com/windingwind/zotero-plugin-template/blob/main/src/hooks.ts)
-
-1. When install/enable/startup triggered from Zotero, `bootstrap.js` > `startup` is called
-   - Wait for Zotero ready
-   - Load `index.js` (the main entrance of plugin code, built from `index.ts`)
-   - Register resources if Zotero 7+
-2. In the main entrance `index.js`, the plugin object is injected under `Zotero` and `hooks.ts` > `onStartup` is called.
-   - Initialize anything you want, including notify listeners, preference panes, and UI elements.
-3. When uninstall/disabled triggered from Zotero, `bootstrap.js` > `shutdown` is called.
-   - `events.ts` > `onShutdown` is called. Remove UI elements, preference panes, or anything created by the plugin.
-   - Remove scripts and release resources.
-
-### About Global Variables
-
-> See also [`src/index.ts`](https://github.com/windingwind/zotero-plugin-template/blob/main/src/index.ts)
-
-The bootstrapped plugin runs in a sandbox, which does not have default global variables like `Zotero` or `window`, which we used to have in the overlay plugins' window environment.
-
-This template registers the following variables to the global scope:
-
-```ts
-Zotero, ZoteroPane, Zotero_Tabs, window, document, rootURI, ztoolkit, addon;
-```
-
-### Create Elements API
-
-The plugin template provides new APIs for bootstrap plugins. We have two reasons to use these APIs, instead of the `createElement/createElementNS`:
-
-- In bootstrap mode, plugins have to clean up all UI elements on exit (disable or uninstall), which is very annoying. Using the `createElement`, the plugin template will maintain these elements. Just `unregisterAll` at the exit.
-- Zotero 7 requires createElement()/createElementNS() → createXULElement() for remaining XUL elements, while Zotero 6 doesn't support `createXULElement`. The React.createElement-like API `createElement` detects namespace(xul/html/svg) and creates elements automatically, with the return element in the corresponding TS element type.
-
-```ts
-createElement(document, "div"); // returns HTMLDivElement
-createElement(document, "hbox"); // returns XUL.Box
-createElement(document, "button", { namespace: "xul" }); // manually set namespace. returns XUL.Button
-```
-
-### About Zotero API
-
-Zotero docs are outdated and incomplete. Clone <https://github.com/zotero/zotero> and search the keyword globally.
-
-> ⭐The [zotero-types](https://github.com/windingwind/zotero-types) provides most frequently used Zotero APIs. It's included in this template by default. Your IDE would provide hint for most of the APIs.
-
-A trick for finding the API you want:
-
-Search the UI label in `.xhtml`/`.flt` files, find the corresponding key in locale file. Then search this keys in `.js`/`.jsx` files.
 
 ### Directory Structure
 
@@ -372,13 +130,9 @@ This section shows the directory structure of a template.
 |   |-- chrome
 |   |   `-- content
 |   |       |-- icons/
-|   |       |-- preferences.xhtml  # preference panel
-|   |       `-- zoteroPane.css
+|   |       `-- preferences.xhtml  # preference panel
 |   |-- locale                     # locale
-|   |   |-- en-US
-|   |   |   |-- addon.ftl
-|   |   |   `-- preferences.ftl
-|   |   `-- zh-CN
+|   |   `-- en-US
 |   |       |-- addon.ftl
 |   |       `-- preferences.ftl
 |   |-- manifest.json              # addon config
@@ -398,8 +152,12 @@ This section shows the directory structure of a template.
 |   |-- hooks.ts                  # lifecycle hooks
 |   |-- index.ts                  # main entry
 |   |-- modules                   # sub modules
-|   |   |-- examples.ts
+|   |   |-- bibsonomy_calls.ts
+|   |   |-- connector.ts
 |   |   `-- preferenceScript.ts
+|   |-- types                    # types TODO: move to typings
+|   |   |-- bibsonomy.ts
+|   |   `-- errors.ts
 |   `-- utils                     # utilities
 |       |-- locale.ts
 |       |-- prefs.ts
@@ -412,7 +170,15 @@ This section shows the directory structure of a template.
 ```
 
 ## Disclaimer
+This plugin is not affiliated with or endorsed by Zotero and developed by the BibSonomy team. It is provided as is, without any guarantee or warranty. Use at your own risk.
 
-Use this code under AGPL. No warranties are provided. Keep the laws of your locality in mind!
+## BibSonomy
 
-If you want to change the license, please contact me at <wyzlshx@foxmail.com>
+[BibSonomy](https://www.bibsonomy.org/) is a social bookmark and publication sharing system. 
+
+It is developed and operated by 
+the [Data Science Chair](https://www.informatik.uni-wuerzburg.de/datascience/home/) at the University of WÃ¼rzburg, Germany,
+the [Information Processing and Analytics Group](https://www.ibi.hu-berlin.de/en/research/Information-processing/) at the Humboldt-UniversitÃ¤t zu Berlin, Germany,
+the [Knowledge & Data Engineering Group](https://www.kde.cs.uni-kassel.de/) at the University of Kassel, Germany, and
+the [L3S Research Center](https://www.l3s.de/) at Leibniz University Hannover, Germany.
+

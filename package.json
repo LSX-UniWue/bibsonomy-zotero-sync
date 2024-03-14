@@ -1,13 +1,13 @@
 {
-  "name": "zotero-addon-template",
-  "version": "1.1.1",
-  "description": "Zotero Addon Template",
+  "name": "bibsonomy-zotero-connector",
+  "version": "0.0.0",
+  "description": "Connect Zotero to BibSonomy",
   "config": {
-    "addonName": "Zotero Addon Template",
-    "addonID": "addontemplate@euclpts.com",
-    "addonRef": "addontemplate",
-    "addonInstance": "AddonTemplate",
-    "prefsPrefix": "extensions.zotero.addontemplate",
+    "addonName": "BibSonomy Zotero Connector",
+    "addonID": "zotero@bibsonomy.org",
+    "addonRef": "bibsonomy",
+    "addonInstance": "bibsonomy",
+    "prefsPrefix": "extensions.zotero.bibsonomy",
     "releasePage": "https://github.com/windingwind/zotero-addon-template/releases",
     "updateJSON": "https://raw.githubusercontent.com/windingwind/zotero-addon-template/main/update.json"
   },
@@ -25,7 +25,7 @@
     "type": "git",
     "url": "git+https://github.com/windingwind/zotero-addon-template.git"
   },
-  "author": "windingwind",
+  "author": "BibSonomy Dev Team",
   "license": "AGPL-3.0-or-later",
   "bugs": {
     "url": "https://github.com/windingwind/zotero-addon-template/issues"
@@ -38,7 +38,7 @@
     "@types/node": "^20.10.4",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^7.1.1",
-    "chokidar": "^3.5.3",
+    "chokidar": "^3.6.0",
     "compressing": "^1.10.0",
     "esbuild": "^0.20.1",
     "eslint": "^8.55.0",
