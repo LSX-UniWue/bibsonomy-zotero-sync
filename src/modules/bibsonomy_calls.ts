@@ -1,12 +1,11 @@
 import { config } from "../../package.json";
-import { BibSonomyPost, BibsonomyBibtex, BibSonomyPostResponse } from '../types/bibsonomy'; //TODO Check this
 import { UnauthorizedError, DuplicateItemError } from '../types/errors';
 
 export { postEntry, getEntry, addMetadataToEntry };
 
 Components.utils.importGlobalProperties(['FormData']);
 
-async function postEntry(item: Zotero.Item, username: string, apikey: string, group: string): BibSonomyPost {
+async function postEntry(item: Zotero.Item, username: string, apikey: string, group: string): Promise<BibsonomyPost> {
     const bibtex = parseZoteroToBibsonomy(item);
     ztoolkit.log(`Parsed Bibtex entry: ${JSON.stringify(bibtex)}`)
 
@@ -17,7 +16,7 @@ async function postEntry(item: Zotero.Item, username: string, apikey: string, gr
         group: [{ name: group }],
         tag: normalizedTags,
         bibtex: bibtex
-    } as BibSonomyPost;
+    } as BibsonomyPost;
 
     const data = {
         "post": post
@@ -53,7 +52,7 @@ async function postEntry(item: Zotero.Item, username: string, apikey: string, gr
     const responseText = await response.json() as BibSonomyPostResponse;
     ztoolkit.log(`Response text: ${JSON.stringify(responseText)}`);
 
-    const generatedPost = await getEntry(username, apikey, responseText.resourcehash) as BibSonomyPost;
+    const generatedPost = await getEntry(username, apikey, responseText.resourcehash) as BibsonomyPost;
 
     ztoolkit.log(`Generated post: ${JSON.stringify(generatedPost)}`);
 
@@ -84,7 +83,7 @@ async function postEntry(item: Zotero.Item, username: string, apikey: string, gr
         });
     }
 
-    await addMetadataToEntry(item, "synced", generatedPost.bibtex.interhash, generatedPost.bibtex.intrahash); //TODO Change synced to a config variable
+    await addMetadataToEntry(item, "synced", generatedPost.bibtex.interhash!, generatedPost.bibtex.intrahash!); //TODO Change synced to a config variable
     ztoolkit.log(`Added metadata to item: ${item.getField('title')}`);
 
     return generatedPost;
@@ -127,7 +126,7 @@ async function uploadFileToEntry(username: string, apikey: string, resourcehash:
         } else {
             ztoolkit.log('Upload failed', await response.text());
         }
-    } catch (error) {
+    } catch (error: any) {
         ztoolkit.log(`Error uploading file: ${error}`);
         ztoolkit.log(error.stack);
         throw new Error(`Error uploading file: ${error}`);
@@ -135,7 +134,7 @@ async function uploadFileToEntry(username: string, apikey: string, resourcehash:
 }
 
 
-async function getEntry(username: string, apikey: string, resourcehash: string): BibSonomyPost {
+async function getEntry(username: string, apikey: string, resourcehash: string): Promise<BibsonomyPost> {
     // Attention: This method assumes that the resourcehash is valid, exists, is accessible and is a BibTeX entry
     ztoolkit.log(`Fetching BibSonomy entry with resourcehash: ${resourcehash}`);
     const response = await fetch(`https://www.bibsonomy.org/api/users/${username}/posts/${resourcehash}`, {
@@ -155,7 +154,7 @@ async function getEntry(username: string, apikey: string, resourcehash: string):
 
     ztoolkit.log(`Response text: ${JSON.stringify(response)}`);
     const data = await response.json();
-    return data.post as BibSonomyPost;
+    return data.post as BibsonomyPost;
 }
 
 async function addMetadataToEntry(item: Zotero.Item, postingTag: string, interhash: string, intrahash: string) {
@@ -198,7 +197,7 @@ async function addMetadataToEntry(item: Zotero.Item, postingTag: string, interha
 
 
 function parseZoteroToBibsonomy(item: Zotero.Item): BibsonomyBibtex {
-    const parsedDate = Zotero.Date.strToDate(item.getField('date'));
+    const parsedDate = Zotero.Date.strToDate(item.getField('date')) as { year?: number, month?: number, day?: number };
     const post: BibsonomyBibtex = {
         bibtexKey: generateBibtexKey(item),
         title: item.getField('title'),
@@ -223,9 +222,9 @@ function parseZoteroToBibsonomy(item: Zotero.Item): BibsonomyBibtex {
         school: item.getField('university'),
         series: item.getField('series'),
         volume: item.getField('volume'),
-        year: parsedDate.year !== undefined ? parsedDate.year.toString() : null,
-        month: parsedDate.month !== undefined ? parsedDate.month.toString() : null,
-        day: parsedDate.day !== undefined ? parsedDate.day.toString() : null,
+        year: parsedDate.year !== undefined ? parsedDate.year.toString() : undefined,
+        month: parsedDate.month !== undefined ? parsedDate.month.toString() : undefined,
+        day: parsedDate.day !== undefined ? parsedDate.day.toString() : undefined,
         type: item.getField('type'),
         url: item.getField('url'),
         //privnote: null //TODO: Does this exist in Zotero?
@@ -247,7 +246,7 @@ function generateBibtexKey(item: Zotero.Item): string {
     }
 
     const author = item.getCreators().map((creator) => creator.lastName)[0];
-    const date = Zotero.Date.strToDate(item.getField('date'));
+    const date = Zotero.Date.strToDate(item.getField('date')) as { year?: number, month?: number, day?: number };
     const year = date.year !== undefined ? date.year.toString() : "";
     const title = item.getField('title').split(" ")[0];
     return `${author}${year}-${title}`;

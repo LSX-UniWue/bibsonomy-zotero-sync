@@ -2,7 +2,6 @@ import { config } from "../../package.json";
 import { getString } from "../utils/locale";
 import { postEntry } from "../modules/bibsonomy_calls";
 import { getPref, setPref } from "../utils/prefs";
-import { BibSonomyPost, BibsonomyBibtex, BibSonomyPostResponse } from '../types/bibsonomy'; //TODO Check this
 import { UnauthorizedError, DuplicateItemError } from '../types/errors';
 
 
@@ -38,7 +37,6 @@ export class BaseFactory {
                     this.unregisterNotifier(notifierID);
                     return;
                 }
-                addon.hooks.onNotify(event, type, ids, extraData);
             },
         };
 
@@ -165,7 +163,7 @@ export class HelperFactory {
         }
 
         try {
-            const post = await postEntry(item, user, apiToken, defaultGroup) as BibSonomyPost;
+            const post = await postEntry(item, user, apiToken, defaultGroup);
             ztoolkit.log(post)
 
             const link = `https://www.bibsonomy.org/bibtex/${post.bibtex.interhash}/${user}`;
@@ -182,14 +180,14 @@ export class HelperFactory {
             new ztoolkit.Clipboard()
                 .addText(link)
                 .copy();
-        } catch (e) {
-            if (e instanceof UnauthorizedError) {
+        } catch (error: any) {
+            if (error instanceof UnauthorizedError) {
                 ztoolkit.getGlobal("alert")("Error: Unauthorized access. Please check your credentials.");
                 setPref("authenticated", false);
-            } else if (e instanceof DuplicateItemError) {
+            } else if (error instanceof DuplicateItemError) {
                 ztoolkit.getGlobal("alert")("Error: Duplicate item detected, a publication with the same BibTeX key already exists in your BibSonomy account.");
             } else {
-                ztoolkit.getGlobal("alert")(`Error: ${e.message}`);
+                ztoolkit.getGlobal("alert")(`Error: ${error.message}`);
             }
         }
     }

@@ -37,7 +37,7 @@ async function updatePrefsUI() {
   // Remove the waiting item 
   menupop?.removeChild(addon.data.prefs!.window.document.querySelector<HTMLElement>(
     `#zotero-prefpane-${config.addonRef}-default-group-waiting`
-  ));
+  )!);
   // Dynamically add new menu items
   groups.forEach((group: string) => {
     const menuitem = addon.data.prefs!.window.document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", "menuitem");
@@ -86,7 +86,7 @@ async function getUserGroups() {
       return [];
     }
 
-    const groups = data.user.groups.group.map(group => group.name);
+    const groups = data.user.groups.group.map((group: { name: string; }) => group.name);
 
     ztoolkit.log(`Fetched groups: ${groups}`);
 

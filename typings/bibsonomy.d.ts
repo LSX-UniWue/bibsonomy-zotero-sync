@@ -1,6 +1,5 @@
-// This file is used to declare the types of the Bibsonomy API response.
 interface BibsonomyPost {
-    user: string;
+    user: { name: string };
     group: { name: string }[];
     tag: { name: string }[];
     bibtex: BibsonomyBibtex;
@@ -51,4 +50,22 @@ interface BibsonomyBibtex {
 interface BibSonomyPostResponse {
     readonly resourcehash: string;
     readonly stat: string;
+}
+
+declare const Bibsonomy: {
+    [attr: string]: any;
+
+    /**
+     * The BibSonomy API base URL
+     */
+    readonly API_URL: string;
+
+    BibsonomyPost: BibsonomyPost;
+    BibsonomyBibtex: BibsonomyBibtex;
+    BibSonomyPostResponse: BibSonomyPostResponse;
+
+}
+
+declare namespace _Bibsonomy {
+    type Bibsonomy = typeof Bibsonomy;
 }
