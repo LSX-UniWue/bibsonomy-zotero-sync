@@ -1,7 +1,10 @@
+import { config } from "../../package.json";
 import { BibSonomyPost, BibsonomyBibtex, BibSonomyPostResponse } from '../types/bibsonomy'; //TODO Check this
 import { UnauthorizedError, DuplicateItemError } from '../types/errors';
 
 export { postEntry, getEntry, addMetadataToEntry };
+
+Components.utils.importGlobalProperties(['FormData']);
 
 async function postEntry(item: Zotero.Item, username: string, apikey: string, group: string): BibSonomyPost {
     const bibtex = parseZoteroToBibsonomy(item);
@@ -20,6 +23,7 @@ async function postEntry(item: Zotero.Item, username: string, apikey: string, gr
         "post": post
     }
 
+
     ztoolkit.log(`Posting data: ${JSON.stringify(data)}`);
 
     const response = await fetch(`https://www.bibsonomy.org/api/users/${username}/posts`, {
@@ -37,10 +41,9 @@ async function postEntry(item: Zotero.Item, username: string, apikey: string, gr
         // Parsing the response body to get the error message
         const errorResponse = await response.json();
         const errorMessage = errorResponse.error || "Unknown error";
-        ztoolkit.getGlobal("alert")(`Error: ${response.status} ${response.statusText}. Details: ${errorMessage}`);
         if (response.status === 401) {
             throw new UnauthorizedError();
-        } else if (response.status === 409) { // Assuming 409 for duplicate
+        } else if (response.status === 400 && errorMessage.startsWith("Could not create new BibTex: This BibTex already exists in your collection")) {
             throw new DuplicateItemError();
         } else {
             throw new Error(`Unexpected API error: ${response.status} ${response.statusText}`);
@@ -51,20 +54,86 @@ async function postEntry(item: Zotero.Item, username: string, apikey: string, gr
     ztoolkit.log(`Response text: ${JSON.stringify(responseText)}`);
 
     const generatedPost = await getEntry(username, apikey, responseText.resourcehash) as BibSonomyPost;
+
     ztoolkit.log(`Generated post: ${JSON.stringify(generatedPost)}`);
+
+    //Get all attached files and upload them to the entry
+    const attachments = item.getAttachments();
+    const popup = new ztoolkit.ProgressWindow(config.addonName).createLine({
+        text: `Uploading attachments for ${item.getField('title')}`,
+        progress: 0
+    }).show(-1);
+    let count = 0;
+    for (const attachmentID of attachments) {
+        const attachment = Zotero.Items.get(attachmentID);
+        if (!attachment.isAttachment()) {
+            ztoolkit.log(`Skipping non-attachment item: ${attachment.getField('title')}`);
+            continue;
+        }
+        const filePath = attachment.getFilePath();
+        if (!filePath) {
+            ztoolkit.log(`Skipping attachment without file path: ${attachment.getField('title')}`);
+            continue;
+        }
+        ztoolkit.log(`Uploading attachment: ${filePath}`);
+        await uploadFileToEntry(username, apikey, "generatedPost.bibtex.intrahash", attachmentID);
+        count++;
+        popup.changeLine({
+            text: `Uploaded attachment: ${attachment.getField('title')}`,
+            progress: count / attachments.length
+        });
+    }
 
     await addMetadataToEntry(item, "synced", generatedPost.bibtex.interhash, generatedPost.bibtex.intrahash); //TODO Change synced to a config variable
     ztoolkit.log(`Added metadata to item: ${item.getField('title')}`);
 
-
-    //TODO: Also upload the PDF file if it exists
-
     return generatedPost;
 }
 
-async function uploadFileToEntry(username: string, apikey: string, resourcehash: string, file: File) {
-    //TODO: Implement file upload
+
+async function uploadFileToEntry(username: string, apikey: string, resourcehash: string, attachmentID: number) {
+    try {
+        const attachment = Zotero.Items.get(attachmentID);
+
+        if (!attachment.isAttachment() || attachment.getFilePath() === false) {
+            ztoolkit.log(`Skipping non-attachment item: ${attachment.getField('title')}`);
+            return;
+        }
+
+        const path = (await attachment.getFilePathAsync()) as string
+        const file = Zotero.File.pathToFile(path);
+
+        const data = await Zotero.File.getBinaryContentsAsync(path);
+
+        const blob = new Blob([data], { type: 'application/octet-stream' });
+
+        const multipart = new FormData();
+        multipart.append('file', blob, file.leafName);
+
+        const attachFileUrl = `https://www.bibsonomy.org/api/users/${username}/posts/${resourcehash}/documents?format=json`;
+        // const attachFileUrl = `http://127.0.0.1:5000/upload`;
+        const headers = {
+            'Authorization': 'Basic ' + btoa(username + ':' + apikey),
+        };
+
+        const response = await fetch(attachFileUrl, {
+            method: 'POST',
+            headers: headers,
+            body: multipart
+        });
+
+        if (response.ok) {
+            ztoolkit.log('File uploaded successfully', await response.text());
+        } else {
+            ztoolkit.log('Upload failed', await response.text());
+        }
+    } catch (error) {
+        ztoolkit.log(`Error uploading file: ${error}`);
+        ztoolkit.log(error.stack);
+        throw new Error(`Error uploading file: ${error}`);
+    }
 }
+
 
 async function getEntry(username: string, apikey: string, resourcehash: string): BibSonomyPost {
     // Attention: This method assumes that the resourcehash is valid, exists, is accessible and is a BibTeX entry
@@ -107,7 +176,12 @@ async function addMetadataToEntry(item: Zotero.Item, postingTag: string, interha
         `;
 
     // Check if the item already has a BibSonomy note
-    const noteID = item.getNotes().find((noteID => { Zotero.Items.get(noteID).getNote().includes('BibSonomy Metadata') }));
+    const noteID = item.getNotes().find((noteID) => {
+        const note = Zotero.Items.get(noteID);
+        const noteContent = note.getNote();
+        ztoolkit.log(`Note content: ${noteContent}`);
+        return noteContent.includes('BibSonomy Metadata');
+    });
     if (noteID) {
         ztoolkit.log(`Found existing BibSonomy note with ID: ${noteID}`);
         noteItem = Zotero.Items.get(noteID)
