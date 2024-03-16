@@ -8,6 +8,11 @@ This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seemle
 
 ## Features
 
+## Working: 
+- [x] Sync item from Zotero to BibSonomy, including PDF attachments
+- [x] Update item in BibSonomy if it is updated in Zotero, including PDF attachments 
+-> Both currently done via manual sync button
+
 ## TODOs
 
 MVP: 
