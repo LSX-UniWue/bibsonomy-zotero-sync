@@ -59,7 +59,7 @@ async function getUserGroups() {
   ztoolkit.log(`Fetching groups for user ${username}`);
 
   // Define the URL and the credentials for the API call
-  const url = "https://www.bibsonomy.org/api/users/" + username;
+  const url = `${config.bibsonomyBaseURL}/users/${username}`;
   const headers = new Headers();
 
 
@@ -118,7 +118,7 @@ async function checkUserAuth() {
 
   ztoolkit.log(`Checking user authentication for ${username} with token ${apiToken}`);
 
-  const url = "https://www.bibsonomy.org/api/users/" + username;
+  const url = `${config.bibsonomyBaseURL}/users/${username}`;
   const headers = new Headers();
 
 

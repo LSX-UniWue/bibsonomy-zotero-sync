@@ -10,7 +10,8 @@
     "prefsPrefix": "extensions.zotero.bibsonomy",
     "releasePage": "https://github.com/tomvoelker/bibsonomy-zotero-sync/releases",
     "updateJSON": "https://raw.githubusercontent.com/tomvoelker/bibsonomy-zotero-sync/main/update.json",
-    "postTag": "zotero_synced"
+    "postTag": "zotero_synced",
+    "bibsonomyBaseURL": "https://www.bibsonomy.org/api"
   },
   "main": "src/index.ts",
   "scripts": {

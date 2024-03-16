@@ -20,7 +20,7 @@ MVP:
 - [ ] Implement get Share URL for a publication
 - [ ] Use privNote to link to the item in BibSonomy
 - [ ] Only show sync button if manual sync is enabled
-- [ ] Move server URL to config
+- [x] Move server URL to config
 - [ ] Add listeners for item updates and deletions
 - [ ] Add listeners to pdf attachment updates
 - [ ] Add sync on startup and shutdown

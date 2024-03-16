@@ -174,7 +174,7 @@ export class HelperFactory {
             const post = await syncItem(item, user, apiToken, defaultGroup);
             ztoolkit.log(post)
 
-            const link = `https://www.bibsonomy.org/bibtex/${post.bibtex.interhash}/${user}`;
+            const link = `${config.bibsonomyBaseURL}/bibtex/${post.bibtex.interhash}/${user}`;
 
             // Give a success message via a progress window
             new ztoolkit.ProgressWindow(config.addonName)
