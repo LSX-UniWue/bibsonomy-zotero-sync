@@ -1,4 +1,4 @@
-# Zotero Plugin Template
+# Bibsonomy Zotero Sync Plugin
 
 [![zotero target version](https://img.shields.io/badge/Zotero-7-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
 [![bibsonomy target version](https://custom-icon-badges.demolab.com/badge/Bibsonomy-4-blue?style=flat-square&logo=bibsonomy)](https://www.bibsonomy.org)
