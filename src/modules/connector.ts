@@ -86,6 +86,15 @@ export class UIFactory {
             commandListener: (ev) => addon.hooks.onDialogEvents("postEntry"),
             icon: menuIcon,
         });
+
+        // Get BibSonomy share URL
+        ztoolkit.Menu.register("item", {
+            tag: "menuitem",
+            id: "zotero-itemmenu-getBibSonomyURL",
+            label: getString("menuitem-getBibSonomyURL-label"),
+            commandListener: (ev) => addon.hooks.onDialogEvents("getShareURL"),
+            icon: menuIcon,
+        });
     }
 
     @logger
@@ -189,5 +198,10 @@ export class HelperFactory {
                 ztoolkit.getGlobal("alert")(`Error: ${error.message}`);
             }
         }
+    }
+
+    static async getShareURL() {
+
+
     }
 }

@@ -72,6 +72,9 @@ function onDialogEvents(type: string) {
     case "postEntry":
       HelperFactory.postEntry();
       break;
+    case "getShareURL":
+      HelperFactory.getShareURL();
+      break;
     default:
       break;
   }

@@ -8,6 +8,25 @@ This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seemle
 
 ## Features
 
+## TODOs
+
+MVP: 
+- [ ] Add a feature list
+- [ ] Implement get Share URL for a publication
+- [ ] Use privNote to link to the item in BibSonomy
+- [ ] Only show sync button if manual sync is enabled
+- [ ] Move server URL to config
+- [ ] Add listeners for item updates and deletions
+- [ ] Add listeners to pdf attachment updates
+- [ ] Add sync on startup and shutdown
+
+Next:
+- [ ] Add mechanism to update local items from server
+- [ ] Add mechanism to merge local and server items
+- [ ] Add folder support
+- [ ] Delete local items if they are deleted on the server (or ask the user)
+    - [ ] Add no sync option (via tag or collection)
+
 ## About BibSonomy
 
 [BibSonomy](https://www.bibsonomy.org/) is a social bookmark and publication sharing system. 
