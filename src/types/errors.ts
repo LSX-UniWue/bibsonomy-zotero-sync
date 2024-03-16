@@ -11,3 +11,10 @@ export class DuplicateItemError extends Error {
         this.name = 'DuplicateItemError';
     }
 }
+
+export class PostNotFoundError extends Error {
+    constructor(message?: string) {
+        super(message || 'Post not found');
+        this.name = 'PostNotFoundError';
+    }
+}

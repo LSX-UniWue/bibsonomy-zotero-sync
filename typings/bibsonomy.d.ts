@@ -5,8 +5,9 @@ interface BibsonomyPost {
     bibtex: BibsonomyBibtex;
     description?: string;
     // Generated fields
-    readonly postingdate?: string; // TODO: Consider using a custom Date type or library
-    readonly changedate?: string;  // TODO: Consider using a custom Date type or library
+    readonly documents?: { document: { filename: string, md5Hash: string, href: string }[] };
+    readonly postingdate?: string;
+    readonly changedate?: string;
 }
 
 interface BibsonomyBibtex {

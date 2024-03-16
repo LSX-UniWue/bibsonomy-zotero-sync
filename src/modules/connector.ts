@@ -1,9 +1,8 @@
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
-import { postEntry } from "../modules/bibsonomy_calls";
+import { syncItem } from "../modules/synchronizationLogic";
 import { getPref, setPref } from "../utils/prefs";
 import { UnauthorizedError, DuplicateItemError } from '../types/errors';
-
 
 function logger(
     target: any,
@@ -163,7 +162,7 @@ export class HelperFactory {
         }
 
         try {
-            const post = await postEntry(item, user, apiToken, defaultGroup);
+            const post = await syncItem(item, user, apiToken, defaultGroup);
             ztoolkit.log(post)
 
             const link = `https://www.bibsonomy.org/bibtex/${post.bibtex.interhash}/${user}`;

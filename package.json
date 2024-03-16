@@ -9,7 +9,8 @@
     "addonInstance": "bibsonomy",
     "prefsPrefix": "extensions.zotero.bibsonomy",
     "releasePage": "https://github.com/windingwind/zotero-addon-template/releases",
-    "updateJSON": "https://raw.githubusercontent.com/windingwind/zotero-addon-template/main/update.json"
+    "updateJSON": "https://raw.githubusercontent.com/windingwind/zotero-addon-template/main/update.json",
+    "postTag": "zotero_synced"
   },
   "main": "src/index.ts",
   "scripts": {
