@@ -8,8 +8,8 @@
     "addonRef": "bibsonomy",
     "addonInstance": "bibsonomy",
     "prefsPrefix": "extensions.zotero.bibsonomy",
-    "releasePage": "https://github.com/windingwind/zotero-addon-template/releases",
-    "updateJSON": "https://raw.githubusercontent.com/windingwind/zotero-addon-template/main/update.json",
+    "releasePage": "https://github.com/tomvoelker/bibsonomy-zotero-sync/releases",
+    "updateJSON": "https://raw.githubusercontent.com/tomvoelker/bibsonomy-zotero-sync/main/update.json",
     "postTag": "zotero_synced"
   },
   "main": "src/index.ts",
@@ -24,14 +24,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/windingwind/zotero-addon-template.git"
+    "url": "git+https://github.com/tomvoelker/bibsonomy-zotero-sync.git"
   },
   "author": "BibSonomy Dev Team",
   "license": "AGPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/windingwind/zotero-addon-template/issues"
+    "url": "https://github.com/tomvoelker/bibsonomy-zotero-sync/issues"
   },
-  "homepage": "https://github.com/windingwind/zotero-addon-template#readme",
+  "homepage": "https://github.com/tomvoelker/bibsonomy-zotero-sync#readme",
   "dependencies": {
     "zotero-plugin-toolkit": "^2.3.15"
   },
