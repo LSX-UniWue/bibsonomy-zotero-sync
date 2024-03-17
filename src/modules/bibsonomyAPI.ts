@@ -52,11 +52,9 @@ async function postEntry(item: Zotero.Item, username: string, apikey: string, gr
     const post = createBibsonomyPostFromItem(item, username, group);
     const data = { "post": post };
 
-
     const responseText = await makeBibsonomyRequest('POST', `${config.bibsonomyBaseURL}/api/users/${username}/posts`, data, username, apikey);
     uploadAllFilesToEntry(username, apikey, responseText.resourcehash!, item);
     return getEntry(username, apikey, responseText.resourcehash) as Promise<BibsonomyPost>;
-
 }
 
 

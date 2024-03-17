@@ -1,5 +1,7 @@
 import hooks from "./hooks";
 import { createZToolkit } from "./utils/ztoolkit";
+import { DialogHelper } from "zotero-plugin-toolkit/dist/helpers/dialog";
+
 
 class Addon {
   public data: {
@@ -13,7 +15,7 @@ class Addon {
     prefs?: {
       window: Window;
     };
-    // dialog?: DialogHelper; //FIXME: Needed in the future?
+    dialog?: DialogHelper;
   };
   // Lifecycle hooks
   public hooks: typeof hooks;

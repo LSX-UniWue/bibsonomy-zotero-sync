@@ -11,7 +11,8 @@ This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seemle
 ## Working: 
 - [x] Sync item from Zotero to BibSonomy, including PDF attachments
 - [x] Update item in BibSonomy if it is updated in Zotero, including PDF attachments 
--> Both currently done via manual sync button
+- [x] Automatically sync items when they are added or updated
+- [x] Delete item in BibSonomy if it is deleted in Zotero
 
 ## TODOs
 
@@ -22,8 +23,8 @@ MVP:
 - [x] Move server URL to config
 - [x] Add listeners for item updates and deletions
 - [x] Add listeners to pdf attachment updates
-- [ ] Add a feature list
 - [ ] Add sync on startup and shutdown
+- [ ] Add a feature list
 
 Next:
 - [ ] Find way to export the PDFs with Annotations
