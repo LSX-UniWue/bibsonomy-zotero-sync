@@ -32,12 +32,12 @@ async function itemAddedListener(ids: number[] | string[]) {
                 const parentID = addedItem.parentID;
                 if (parentID === undefined || parentID === false) {
                     ztoolkit.log("ParentID is undefined");
-                    break;
+                    continue;
                 }
                 await itemModifiedListener([parentID]);
             } else {
                 ztoolkit.log("Modified Item is not an attachment, skipping sync");
-                break;
+                continue;
             }
         } else {
             ztoolkit.log("Syncing item");
@@ -82,12 +82,12 @@ async function itemModifiedListener(ids: number[] | string[]) {
                 const parentID = modifiedItem.parentID;
                 if (parentID === undefined || parentID === false) {
                     ztoolkit.log("ParentID is undefined");
-                    break;
+                    continue;
                 }
                 await itemModifiedListener([parentID]);
             } else {
                 ztoolkit.log("Modified Item is not an attachment, skipping sync");
-                break;
+                continue;
             }
         } else if (checkIfItemIsOnline(modifiedItem, user, apiToken)) {
             ztoolkit.log("Syncing item");
@@ -138,12 +138,12 @@ async function itemDeletedListener(ids: number[] | string[]) {
                 const parentID = deletedItem.parentID;
                 if (parentID === undefined || parentID === false) {
                     ztoolkit.log("ParentID is undefined");
-                    break;
+                    continue;
                 }
                 await itemModifiedListener([parentID]);
             } else {
                 ztoolkit.log("Deleted Item is not an attachment, skipping sync");
-                break;
+                continue;
             }
         }
 

@@ -3,7 +3,40 @@ import { getPref } from '../utils/prefs';
 import { config } from '../../package.json';
 import { handleHttpResponseError } from './bibsonomyAPI';
 
-export { syncItemDefault, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem }
+export { syncItemDefault, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem, syncAllItems }
+
+/**
+ * Synchronizes all items in the user's library with BibSonomy, that are already online.
+ * 
+ * @returns {Promise<void>} A promise that resolves when the synchronization is complete.
+ */
+async function syncAllItems() {
+    const libraryID = Zotero.Libraries.userLibraryID;
+    const items = await Zotero.Items.getAll(libraryID, true, false);
+
+    const regularItems = items.filter(item => item.isRegularItem());
+
+    ztoolkit.log(`Synchronizing ${regularItems.length} items with BibSonomy`);
+
+    for (const item of regularItems) {
+        // Skip non-regular items
+        if (!item.isRegularItem()) {
+            continue;
+        }
+
+        // Skip items that are not online (if not in auto mode)
+        if (getPref("syncPreference") !== "auto") {
+            const hashes = getBibsonomyMetadataFromItem(item);
+            ztoolkit.log(`Checking if item ${item.getField('title')} is online with hashes: ${JSON.stringify(hashes)}`);
+            if (hashes.interhash === "" || hashes.intrahash === "") {
+                ztoolkit.log(`Item ${item.getField('title')} does not have a hash, assuming it is not online`);
+                continue;
+            }
+        }
+        await syncItemDefault(item);
+    }
+}
+
 
 async function syncItemDefault(item: Zotero.Item, force_update: boolean = false): Promise<BibsonomyPost> {
     const user = getPref("username");

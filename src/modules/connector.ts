@@ -1,6 +1,6 @@
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
-import { syncItemDefault, deleteItemOnline } from "../modules/synchronizationLogic";
+import { syncItemDefault, deleteItemOnline, syncAllItems } from "../modules/synchronizationLogic";
 import { getPref, setPref } from "../utils/prefs";
 import { UnauthorizedError, DuplicateItemError } from '../types/errors';
 import { get } from "http";
@@ -148,6 +148,10 @@ export class UIFactory {
 }
 
 export class HelperFactory {
+
+    static async syncAllEntries() {
+        await syncAllItems();
+    }
 
     static async syncEntry(item: Zotero.Item | null = null, force_update: boolean = false, notifyDuplicate: boolean = true) {
         // Get the post the user is currently viewing

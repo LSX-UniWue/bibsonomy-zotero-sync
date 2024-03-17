@@ -23,7 +23,7 @@ MVP:
 - [x] Move server URL to config
 - [x] Add listeners for item updates and deletions
 - [x] Add listeners to pdf attachment updates
-- [ ] Add sync on startup and shutdown
+- [x] Add sync on startup and shutdown
 - [ ] Add a feature list
 
 Next:

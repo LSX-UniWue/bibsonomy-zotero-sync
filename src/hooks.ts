@@ -30,7 +30,7 @@ async function onMainWindowLoad(win: Window): Promise<void> {
   // Create ztoolkit for every window
   addon.data.ztoolkit = createZToolkit();
   UIFactory.registerRightClickMenuItems();
-
+  HelperFactory.syncAllEntries();
   await Zotero.Promise.delay(1000);
 
 }
@@ -41,6 +41,7 @@ async function onMainWindowUnload(win: Window): Promise<void> {
 }
 
 function onShutdown(): void {
+  HelperFactory.syncAllEntries();
   ztoolkit.unregisterAll();
   addon.data.dialog?.window?.close();
   // Remove addon object
