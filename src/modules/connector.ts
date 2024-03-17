@@ -37,6 +37,8 @@ export class BaseFactory {
                     this.unregisterNotifier(notifierID);
                     return;
                 }
+                //Print all arguments
+                ztoolkit.log("Notifier called with event: " + event + " type: " + type + " ids: " + ids + " extraData: " + JSON.stringify(extraData));
             },
         };
 
@@ -146,6 +148,9 @@ export class HelperFactory {
             ztoolkit.log(post)
             return `${config.bibsonomyBaseURL}/bibtex/${post.bibtex.interhash}/${user}`;
         } catch (error: any) {
+            ztoolkit.log(error);
+            ztoolkit.log(error.message);
+            ztoolkit.log(error.stack);
             if (error instanceof UnauthorizedError) {
                 ztoolkit.getGlobal("alert")("Error: Unauthorized access. Please check your credentials.");
                 setPref("authenticated", false);

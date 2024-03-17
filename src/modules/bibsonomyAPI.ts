@@ -31,10 +31,11 @@ async function makeBibsonomyRequest(method: 'POST' | 'PUT', url: string, data: a
 
     if (!response.ok) {
         // Extracted error handling
-        handleHttpResponseError(response);
+        ztoolkit.log(`Error in ${method} request to URL response: ${response.url} with status: ${response.status}`);
+        await handleHttpResponseError(response);
     }
-
-    return response.json() as Promise<BibSonomyPostResponse>;
+    ztoolkit.log(`Request successful: ${response.url} Status: ${response.status}`);
+    return await response.json() as BibSonomyPostResponse;
 }
 
 /**
@@ -77,7 +78,7 @@ async function getEntry(username: string, apikey: string, resourcehash: string):
     });
 
     if (!response.ok) {
-        handleHttpResponseError(response);
+        await handleHttpResponseError(response);
     }
 
     const data = await response.json();
@@ -234,10 +235,16 @@ async function handleHttpResponseError(response: Response): Promise<void> {
         case 401: throw new UnauthorizedError();
         case 400:
             if (errorMessage.startsWith("Could not create new BibTex: This BibTex already exists in your collection")) {
+                ztoolkit.log(`Duplicate item detected: ${errorMessage}`);
                 throw new DuplicateItemError();
             };
-            throw new Error(`Unexpected API error: ${response.status} ${response.statusText}`);
-        case 404: throw new PostNotFoundError();
-        default: throw new Error(`Unexpected API error: ${response.status} ${response.statusText}`);
+            ztoolkit.log(`Unexpected API error: ${response.status} ${response.statusText} - ${errorMessage}`);
+            throw new Error(`Unexpected API error: ${response.status} ${response.statusText} - ${errorMessage}`);
+        case 404:
+            ztoolkit.log(`Post not found: ${errorMessage}`);
+            throw new PostNotFoundError();
+        default:
+            ztoolkit.log(`Unexpected API error: ${response.status} ${response.statusText} - ${errorMessage}`);
+            throw new Error(`Unexpected API error: ${response.status} ${response.statusText} - ${errorMessage}`);
     }
 }

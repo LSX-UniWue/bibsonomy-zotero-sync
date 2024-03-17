@@ -36,14 +36,21 @@ function createBibsonomyPostFromItem(item: Zotero.Item, username: string, group:
  * @returns The parsed BibsonomyBibtex object.
  */
 function parseZoteroToBibsonomy(item: Zotero.Item): BibsonomyBibtex {
+    const zoteroMetadata = `
+    ---------------------------
+    -Zotero Sync Item Metadata-
+    ------Do not modify!-------
+    ItemID: ${item.getField('id')}
+    ---------------------------
+    `;
+
     const parsedDate = Zotero.Date.strToDate(item.getField('date')) as { year?: number, month?: number, day?: number };
-    const misc = (item.getField('extra') ? item.getField('extra') : '') + (item.getField('DOI') ? '\n doi = {' + item.getField('DOI') + '}' : '');
-    return {
+    const bibtex = {
         bibtexKey: generateBibtexKey(item),
         title: item.getField('title'),
         author: item.getCreators().map((creator) => creator.lastName + ', ' + creator.firstName).join(" and "),
         entrytype: mapZoteroItemType(item.itemType),
-        misc: misc,
+        misc: (item.getField('DOI') ? ' doi = {' + item.getField('DOI') + '}' : ''),
         bibtexAbstract: item.getField('abstractNote'),
         address: item.getField('place'),
         booktitle: item.getField('publicationTitle'),
@@ -55,7 +62,7 @@ function parseZoteroToBibsonomy(item: Zotero.Item): BibsonomyBibtex {
         institution: item.getField('institution'),
         // organization: item.getField(''),
         journal: item.getField('journalAbbreviation'),
-        // note: null; //TODO: Is possible via getNotes etc., but not a direct field
+        note: item.getField('extra'),
         number: item.getField('issue'),
         pages: item.getField('pages'),
         publisher: item.getField('publisher'),
@@ -68,8 +75,10 @@ function parseZoteroToBibsonomy(item: Zotero.Item): BibsonomyBibtex {
         type: item.getField('type'),
         url: item.getField('url'),
         // Use the privnote field to store the Zotero item key //TODO: Should any other metadata be stored here?
-        privnote: item.getField('id')
-    };
+        privnote: zoteroMetadata
+    } as BibsonomyBibtex;
+    ztoolkit.log(`Parsed Zotero item to Bibsonomy Bibtex: ${JSON.stringify(bibtex)}`);
+    return bibtex;
 }
 
 
@@ -77,8 +86,11 @@ function parseBibsonomyToZotero(bibtex: BibsonomyBibtex): Zotero.Item {
     const itemType = mapBibsonomyTypeToZotero(bibtex.entrytype);
     const item = new Zotero.Item(itemType);
 
+    const zoteroMetadata = bibtex.privnote || '';
+    const zoteroID = zoteroMetadata.match(/ItemID: (.*)/)?.[1] || '';
+
     // Set the basic fields
-    item.setField('id', bibtex.privnote || '')
+    item.setField('id', zoteroID || '')
     item.setField('title', bibtex.title);
     item.setField('abstractNote', bibtex.bibtexAbstract || '');
     item.setField('place', bibtex.address || '');
@@ -149,7 +161,9 @@ function generateBibtexKey(item: Zotero.Item): string {
     if (existingKey) return existingKey;
 
     // Extract the first author's last name
-    const authorLastName = item.getCreators().map(creator => creator.lastName)[0] || 'UnknownAuthor';
+    let authorLastName = item.getCreators().map(creator => creator.lastName)[0] || 'UnknownAuthor';
+    //Make non ASCII characters ASCII
+    authorLastName = authorLastName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     // Extract the publication year
     const publicationYear = (Zotero.Date.strToDate(item.getField('date')) as { year?: number, month?: number, day?: number }).year || 'NoYear';
     // Extract the first word of the title
