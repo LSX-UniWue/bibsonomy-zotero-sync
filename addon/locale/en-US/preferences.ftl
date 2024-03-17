@@ -1,4 +1,4 @@
-prefs-title = BibSonomy Connector
+prefs-title = BibSonomy
 pref-auth-title = Authentication
 pref-sync-title = Synchronization
 pref-default-group-title = Default Group

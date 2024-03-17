@@ -16,13 +16,13 @@ This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seemle
 ## TODOs
 
 MVP: 
-- [ ] Add a feature list
-- [ ] Implement get Share URL for a publication
-- [ ] Use privNote to link to the item in BibSonomy
-- [ ] Only show sync button if manual sync is enabled
+- [x] Implement get Share URL for a publication
+- [x] Use privNote to link to the item in BibSonomy
+- [x] Only show sync button if manual sync is enabled
 - [x] Move server URL to config
 - [ ] Add listeners for item updates and deletions
 - [ ] Add listeners to pdf attachment updates
+- [ ] Add a feature list
 - [ ] Add sync on startup and shutdown
 
 Next:

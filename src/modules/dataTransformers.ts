@@ -37,12 +37,13 @@ function createBibsonomyPostFromItem(item: Zotero.Item, username: string, group:
  */
 function parseZoteroToBibsonomy(item: Zotero.Item): BibsonomyBibtex {
     const parsedDate = Zotero.Date.strToDate(item.getField('date')) as { year?: number, month?: number, day?: number };
+    const misc = (item.getField('extra') ? item.getField('extra') : '') + (item.getField('DOI') ? '\n doi = {' + item.getField('DOI') + '}' : '');
     return {
         bibtexKey: generateBibtexKey(item),
         title: item.getField('title'),
         author: item.getCreators().map((creator) => creator.lastName + ', ' + creator.firstName).join(" and "),
         entrytype: mapZoteroItemType(item.itemType),
-        misc: item.getField('extra'),
+        misc: misc,
         bibtexAbstract: item.getField('abstractNote'),
         address: item.getField('place'),
         booktitle: item.getField('publicationTitle'),
@@ -66,7 +67,8 @@ function parseZoteroToBibsonomy(item: Zotero.Item): BibsonomyBibtex {
         day: parsedDate.day !== undefined ? parsedDate.day.toString() : undefined,
         type: item.getField('type'),
         url: item.getField('url'),
-        privnote: "This is a test WOW" //TODO: Does this exist in Zotero?
+        // Use the privnote field to store the Zotero item key //TODO: Should any other metadata be stored here?
+        privnote: item.getField('id')
     };
 }
 
@@ -76,6 +78,7 @@ function parseBibsonomyToZotero(bibtex: BibsonomyBibtex): Zotero.Item {
     const item = new Zotero.Item(itemType);
 
     // Set the basic fields
+    item.setField('id', bibtex.privnote || '')
     item.setField('title', bibtex.title);
     item.setField('abstractNote', bibtex.bibtexAbstract || '');
     item.setField('place', bibtex.address || '');
@@ -116,7 +119,12 @@ function parseBibsonomyToZotero(bibtex: BibsonomyBibtex): Zotero.Item {
     }
 
     // Extra and misc fields
-    item.setField('extra', bibtex.misc || '');
+    const extra = bibtex.misc ? bibtex.misc : '';
+    const doi = bibtex.misc?.match(/doi = {(.*)}/)?.[1] || '';
+    const cleanedExtra = extra.replace(/\n doi = {.*}/, ''); // Remove DOI from extra
+
+    item.setField('extra', cleanedExtra);
+    item.setField('DOI', doi);
 
     // TODO: Handle any fields that are not directly mapped or need special handling
     // For example, 'crossref', 'editor', and 'note' might require custom logic or API usage.

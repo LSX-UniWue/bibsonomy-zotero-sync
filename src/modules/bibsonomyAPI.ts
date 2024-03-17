@@ -49,7 +49,7 @@ async function makeBibsonomyRequest(method: 'POST' | 'PUT', url: string, data: a
 async function postEntry(item: Zotero.Item, username: string, apikey: string, group: string): Promise<BibsonomyPost> {
     const post = createBibsonomyPostFromItem(item, username, group);
     const data = { "post": post };
-    const responseText = await makeBibsonomyRequest('POST', `${config.bibsonomyBaseURL}/users/${username}/posts`, data, username, apikey);
+    const responseText = await makeBibsonomyRequest('POST', `${config.bibsonomyBaseURL}/api/users/${username}/posts`, data, username, apikey);
 
     uploadAllFilesToEntry(username, apikey, responseText.resourcehash!, item);
     return getEntry(username, apikey, responseText.resourcehash) as Promise<BibsonomyPost>;
@@ -72,7 +72,7 @@ async function getEntry(username: string, apikey: string, resourcehash: string):
         'Authorization': 'Basic ' + btoa(username + ':' + apikey)
     }
 
-    const response = await fetch(`${config.bibsonomyBaseURL}/users/${username}/posts/${resourcehash}?format=json`, {
+    const response = await fetch(`${config.bibsonomyBaseURL}/api/users/${username}/posts/${resourcehash}?format=json`, {
         headers: headers
     });
 
@@ -98,7 +98,7 @@ async function getEntry(username: string, apikey: string, resourcehash: string):
 async function updateBibsonomyPost(item: Zotero.Item, intrahash: string, username: string, apikey: string, group: string): Promise<BibsonomyPost> {
     const post = createBibsonomyPostFromItem(item, username, group);
     const data = { "post": post };
-    const responseText = await makeBibsonomyRequest('PUT', `${config.bibsonomyBaseURL}/users/${username}/posts/${intrahash}`, data, username, apikey);
+    const responseText = await makeBibsonomyRequest('PUT', `${config.bibsonomyBaseURL}/api/users/${username}/posts/${intrahash}`, data, username, apikey);
 
     deleteAllFilesFromEntry(username, apikey, responseText.resourcehash);
     uploadAllFilesToEntry(username, apikey, responseText.resourcehash, item);
@@ -162,7 +162,7 @@ async function uploadFileToEntry(username: string, apikey: string, resourcehash:
         const multipart = new FormData();
         multipart.append('file', blob, file.leafName);
 
-        const response = await fetch(`${config.bibsonomyBaseURL}/users/${username}/posts/${resourcehash}/documents?format=json`, {
+        const response = await fetch(`${config.bibsonomyBaseURL}/api/users/${username}/posts/${resourcehash}/documents?format=json`, {
             method: 'POST',
             headers: { 'Authorization': 'Basic ' + btoa(username + ':' + apikey) },
             body: multipart

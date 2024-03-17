@@ -3,6 +3,7 @@ import { getString } from "../utils/locale";
 import { syncItem } from "../modules/synchronizationLogic";
 import { getPref, setPref } from "../utils/prefs";
 import { UnauthorizedError, DuplicateItemError } from '../types/errors';
+import { get } from "http";
 
 function logger(
     target: any,
@@ -78,14 +79,20 @@ export class BaseFactory {
 export class UIFactory {
     @logger
     static registerRightClickMenuItems() {
+        ztoolkit.Menu.unregisterAll();
         const menuIcon = `chrome://${config.addonRef}/content/icons/icon.png`;
-        ztoolkit.Menu.register("item", {
-            tag: "menuitem",
-            id: "zotero-itemmenu-postEntry",
-            label: getString("menuitem-postEntry-label"),
-            commandListener: (ev) => addon.hooks.onDialogEvents("postEntry"),
-            icon: menuIcon,
-        });
+        if (getPref("authenticated") === false) {
+            ztoolkit.Menu.register("item", {
+                tag: "menuitem",
+                id: "zotero-itemmenu-authenticate",
+                label: getString("menuitem-authenticate-label"),
+                commandListener: (ev) => {
+                    ztoolkit.getGlobal("alert")("Please authenticate with BibSonomy to use this feature. Go to the preferences to fill in your BibSonomy credentials.");
+                },
+                icon: menuIcon,
+            });
+            return; // Do not register other menu items if the user is not authenticated
+        }
 
         // Get BibSonomy share URL
         ztoolkit.Menu.register("item", {
@@ -95,60 +102,24 @@ export class UIFactory {
             commandListener: (ev) => addon.hooks.onDialogEvents("getShareURL"),
             icon: menuIcon,
         });
-    }
 
-    @logger
-    //TODO: Check why the hell this is needed for registering the custom item properties
-    static async registerExtraColumnWithCustomCell() {
-        await ztoolkit.ItemTree.register(
-            "test2",
-            "custom column",
-            (
-                field: string,
-                unformatted: boolean,
-                includeBaseMapped: boolean,
-                item: Zotero.Item,
-            ) => {
-                return String(item.id);
-            },
-            {
-                renderCell(index, data, column) {
-                    ztoolkit.log("Custom column cell is rendered!");
-                    const span = document.createElementNS(
-                        "http://www.w3.org/1999/xhtml",
-                        "span",
-                    );
-                    span.className = `cell ${column.className}`;
-                    span.style.background = "#0dd068";
-                    span.innerText = "⭐" + data;
-                    return span;
-                },
-            },
-        );
-    }
-
-    @logger
-    static async registerCustomItemProperties() {
-        await ztoolkit.ItemBox.register(
-            "itemBoxFieldNonEditable",
-            "BibSonomy Metadata",
-            (field, unformatted, includeBaseMapped, item, original) => {
-                return (
-                    ""
-                );
-            },
-            {
-                editable: false,
-                index: 2,
-                collapsible: true,
-            },
-        );
+        // Sync entry with BibSonomy
+        ztoolkit.log("Sync preference: " + getPref("syncPreference"));
+        if (getPref("syncPreference") === "manual") {
+            ztoolkit.Menu.register("item", {
+                tag: "menuitem",
+                id: "zotero-itemmenu-syncEntry",
+                label: getString("menuitem-syncEntry-label"),
+                commandListener: (ev) => addon.hooks.onDialogEvents("syncEntry"),
+                icon: menuIcon,
+            });
+        }
     }
 }
 
 export class HelperFactory {
 
-    static async postEntry() {
+    static async syncEntry() {
         // Get the post the user is currently viewing
         const item = ZoteroPane.getSelectedItems()[0];
 
@@ -173,21 +144,7 @@ export class HelperFactory {
         try {
             const post = await syncItem(item, user, apiToken, defaultGroup);
             ztoolkit.log(post)
-
-            const link = `${config.bibsonomyBaseURL}/bibtex/${post.bibtex.interhash}/${user}`;
-
-            // Give a success message via a progress window
-            new ztoolkit.ProgressWindow(config.addonName)
-                .createLine({
-                    text: "Publication added successfully! (Link copied to clipboard)",
-                    type: "success",
-                })
-                .show();
-
-            // Copy the link to the clipboard
-            new ztoolkit.Clipboard()
-                .addText(link)
-                .copy();
+            return `${config.bibsonomyBaseURL}/bibtex/${post.bibtex.interhash}/${user}`;
         } catch (error: any) {
             if (error instanceof UnauthorizedError) {
                 ztoolkit.getGlobal("alert")("Error: Unauthorized access. Please check your credentials.");
@@ -197,11 +154,30 @@ export class HelperFactory {
             } else {
                 ztoolkit.getGlobal("alert")(`Error: ${error.message}`);
             }
+            return "";
         }
     }
 
     static async getShareURL() {
+        const link = await HelperFactory.syncEntry();
+        if (!link || link === "") {
+            new ztoolkit.ProgressWindow(config.addonName)
+                .createLine({
+                    text: "Error: Publication could not be synced.",
+                    type: "error",
+                })
+            return;
+        }
+        new ztoolkit.Clipboard()
+            .addText(link)
+            .copy();
 
-
+        // Give a success message via a progress window
+        new ztoolkit.ProgressWindow(config.addonName)
+            .createLine({
+                text: "Publication synced successfully! (Link copied to clipboard)",
+                type: "success",
+            })
+            .show();
     }
 }

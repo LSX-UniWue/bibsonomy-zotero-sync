@@ -2,6 +2,8 @@ import { get } from "http";
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
 import { getPref, setPref } from "../utils/prefs";
+import { BaseFactory, HelperFactory, UIFactory } from "./connector"
+
 
 export async function registerPrefsScripts(_window: Window) {
   // Initialize or update preferences UI
@@ -59,7 +61,7 @@ async function getUserGroups() {
   ztoolkit.log(`Fetching groups for user ${username}`);
 
   // Define the URL and the credentials for the API call
-  const url = `${config.bibsonomyBaseURL}/users/${username}`;
+  const url = `${config.bibsonomyBaseURL}/api/users/${username}`;
   const headers = new Headers();
 
 
@@ -118,7 +120,7 @@ async function checkUserAuth() {
 
   ztoolkit.log(`Checking user authentication for ${username} with token ${apiToken}`);
 
-  const url = `${config.bibsonomyBaseURL}/users/${username}`;
+  const url = `${config.bibsonomyBaseURL}/api/users/${username}`;
   const headers = new Headers();
 
 
@@ -177,5 +179,14 @@ function bindPrefEvents() {
       await checkUserAuth();
       updateAuthUi();
     });
+
+  ztoolkit.log("Registering sync preference change event")
+  addon.data.prefs!.window.document.querySelectorAll(`#zotero-prefpane-${config.addonRef}-sync-preference radio`).forEach((radioButton) => {
+    radioButton.addEventListener("click", (e) => {
+      ztoolkit.log(e);
+      setPref("syncPreference", radioButton.getAttribute("value")!);
+      UIFactory.registerRightClickMenuItems();
+    });
+  });
 
 }

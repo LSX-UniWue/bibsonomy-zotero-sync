@@ -29,10 +29,6 @@ async function onStartup() {
 async function onMainWindowLoad(win: Window): Promise<void> {
   // Create ztoolkit for every window
   addon.data.ztoolkit = createZToolkit();
-
-  // await UIFactory.registerExtraColumnWithCustomCell();
-  // await UIFactory.registerCustomItemProperties();
-
   UIFactory.registerRightClickMenuItems();
 
   await Zotero.Promise.delay(1000);
@@ -41,12 +37,10 @@ async function onMainWindowLoad(win: Window): Promise<void> {
 
 async function onMainWindowUnload(win: Window): Promise<void> {
   ztoolkit.unregisterAll();
-  // addon.data.dialog?.window?.close();
 }
 
 function onShutdown(): void {
   ztoolkit.unregisterAll();
-  // addon.data.dialog?.window?.close();
   // Remove addon object
   addon.data.alive = false;
   delete Zotero[config.addonInstance];
@@ -69,8 +63,8 @@ async function onPrefsEvent(type: string, data: { [key: string]: any }) {
 
 function onDialogEvents(type: string) {
   switch (type) {
-    case "postEntry":
-      HelperFactory.postEntry();
+    case "syncEntry":
+      HelperFactory.syncEntry();
       break;
     case "getShareURL":
       HelperFactory.getShareURL();
