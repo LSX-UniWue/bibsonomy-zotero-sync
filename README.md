@@ -26,6 +26,7 @@ MVP:
 - [ ] Add sync on startup and shutdown
 
 Next:
+- [ ] Find way to export the PDFs with Annotations
 - [ ] Add mechanism to update local items from server
 - [ ] Add mechanism to merge local and server items
 - [ ] Add folder support

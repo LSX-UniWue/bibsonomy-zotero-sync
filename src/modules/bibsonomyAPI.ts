@@ -2,8 +2,9 @@ import { UnauthorizedError, DuplicateItemError, PostNotFoundError } from '../typ
 import { config } from "../../package.json";
 import { logError, logProgress } from '../utils/logging';
 import { createBibsonomyPostFromItem } from './dataTransformers';
+import { checkIfItemIsOnline, getBibsonomyMetadataFromItem } from './synchronizationLogic';
 
-export { postEntry, updateBibsonomyPost, getEntry, uploadAllFilesToEntry, uploadFileToEntry, deleteAllFilesFromEntry, deleteFileFromEntry };
+export { postEntry, updateBibsonomyPost, getEntry, uploadAllFilesToEntry, uploadFileToEntry, deleteAllFilesFromEntry, deleteFileFromEntry, handleHttpResponseError };
 
 Components.utils.importGlobalProperties(['FormData']);
 
@@ -50,10 +51,12 @@ async function makeBibsonomyRequest(method: 'POST' | 'PUT', url: string, data: a
 async function postEntry(item: Zotero.Item, username: string, apikey: string, group: string): Promise<BibsonomyPost> {
     const post = createBibsonomyPostFromItem(item, username, group);
     const data = { "post": post };
-    const responseText = await makeBibsonomyRequest('POST', `${config.bibsonomyBaseURL}/api/users/${username}/posts`, data, username, apikey);
 
+
+    const responseText = await makeBibsonomyRequest('POST', `${config.bibsonomyBaseURL}/api/users/${username}/posts`, data, username, apikey);
     uploadAllFilesToEntry(username, apikey, responseText.resourcehash!, item);
     return getEntry(username, apikey, responseText.resourcehash) as Promise<BibsonomyPost>;
+
 }
 
 

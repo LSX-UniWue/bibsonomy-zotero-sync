@@ -1,6 +1,54 @@
 import { getEntry, postEntry, updateBibsonomyPost } from './bibsonomyAPI';
+import { getPref } from '../utils/prefs';
+import { config } from '../../package.json';
+import { handleHttpResponseError } from './bibsonomyAPI';
 
-export { syncItem }
+export { syncItemDefault, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem }
+
+async function syncItemDefault(item: Zotero.Item, force_update: boolean = false): Promise<BibsonomyPost> {
+    const user = getPref("username");
+    const apiToken = getPref("apiToken");
+    const defaultGroup = getPref("defaultGroup")
+
+    if (!user || !apiToken || !defaultGroup || typeof user !== 'string' || typeof apiToken !== 'string' || typeof defaultGroup !== 'string') {
+        ztoolkit.getGlobal("alert")("Error: Please fill in your BibSonomy credentials in the preferences.");
+        throw new Error("BibSonomy credentials not set");
+    }
+    return await syncItem(item, user, apiToken, defaultGroup, force_update);
+}
+
+async function deleteItemOnline(item: Zotero.Item): Promise<void> {
+    const user = getPref("username");
+    const apiToken = getPref("apiToken");
+
+    if (!user || !apiToken || typeof user !== 'string' || typeof apiToken !== 'string') {
+        ztoolkit.getGlobal("alert")("Error: Please fill in your BibSonomy credentials in the preferences.");
+        throw new Error("BibSonomy credentials not set");
+    }
+
+    if (!checkIfItemIsOnline(item, user, apiToken)) {
+        ztoolkit.log(`Item ${item.getField('title')} is not online, skipping deletion.`);
+        return;
+    }
+
+    const hashes = getBibsonomyMetadataFromItem(item);
+
+    const url = `${config.bibsonomyBaseURL}/api/users/${user}/posts/${hashes.intrahash}`;
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + btoa(user + ':' + apiToken)
+        },
+    });
+
+    if (!response.ok) {
+        ztoolkit.log(`Failed to delete item ${item.getField('title')} from BibSonomy`);
+        await handleHttpResponseError(response);
+    }
+
+    ztoolkit.log(`Deleted item ${item.getField('title')} from BibSonomy`);
+}
 
 /**
  * Synchronizes a Zotero item with its BibSonomy Post, posting it if it's not already online,
@@ -11,7 +59,7 @@ export { syncItem }
  * @param group The group within which the item should be posted or updated.
  * @returns A promise that resolves to the BibsonomyPost object representing the synchronized item.
  */
-async function syncItem(item: Zotero.Item, username: string, apikey: string, group: string): Promise<BibsonomyPost> {
+async function syncItem(item: Zotero.Item, username: string, apikey: string, group: string, force_update: boolean = false): Promise<BibsonomyPost> {
     const isOnline = checkIfItemIsOnline(item, username, apikey);
     let post = null;
     if (!isOnline) {
@@ -33,7 +81,7 @@ async function syncItem(item: Zotero.Item, username: string, apikey: string, gro
             // Update item offline (requires implementation)
             ztoolkit.log(`Updating ${item.getField('title')} offline.`);
             //TODO: Implement this function
-        } else if (updatedOffline) {
+        } else if (updatedOffline || force_update) {
             // Update item online
             ztoolkit.log(`Updating ${item.getField('title')} online.`);
             post = await updateBibsonomyPost(item, hashes.intrahash, username, apikey, group);

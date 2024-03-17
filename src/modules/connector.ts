@@ -1,9 +1,10 @@
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
-import { syncItem } from "../modules/synchronizationLogic";
+import { syncItemDefault, deleteItemOnline } from "../modules/synchronizationLogic";
 import { getPref, setPref } from "../utils/prefs";
 import { UnauthorizedError, DuplicateItemError } from '../types/errors';
 import { get } from "http";
+import { itemAddedListener, itemModifiedListener, itemDeletedListener } from "../modules/listeners"
 
 function logger(
     target: any,
@@ -37,6 +38,33 @@ export class BaseFactory {
                     this.unregisterNotifier(notifierID);
                     return;
                 }
+
+                // Dispatch all events related to syncing items
+                // The handling of the syncmode is done within the methods
+                if (type === "item") {
+                    switch (event) {
+                        case "add":
+                            ztoolkit.log("Item added");
+                            await itemAddedListener(ids);
+                            break;
+                        case "modify":
+                            ztoolkit.log("Item modified");
+                            await itemModifiedListener(ids);
+                            break;
+                        case "trash":
+                            ztoolkit.log("Item trashed");
+                            await itemDeletedListener(ids);
+                            break;
+                        case "delete":
+                            ztoolkit.log("Item deleted");
+                            await itemDeletedListener(ids);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+
                 //Print all arguments
                 ztoolkit.log("Notifier called with event: " + event + " type: " + type + " ids: " + ids + " extraData: " + JSON.stringify(extraData));
             },
@@ -107,7 +135,7 @@ export class UIFactory {
 
         // Sync entry with BibSonomy
         ztoolkit.log("Sync preference: " + getPref("syncPreference"));
-        if (getPref("syncPreference") === "manual") {
+        if (getPref("syncPreference") === "manual" || getPref("syncPreference") === "semi-auto") {
             ztoolkit.Menu.register("item", {
                 tag: "menuitem",
                 id: "zotero-itemmenu-syncEntry",
@@ -121,9 +149,15 @@ export class UIFactory {
 
 export class HelperFactory {
 
-    static async syncEntry() {
+    static async syncEntry(item: Zotero.Item | null = null, force_update: boolean = false, notifyDuplicate: boolean = true) {
         // Get the post the user is currently viewing
-        const item = ZoteroPane.getSelectedItems()[0];
+        if (!item) {
+            if (ZoteroPane.getSelectedItems().length === 0) {
+                ztoolkit.getGlobal("alert")("Error: No item selected.");
+                return;
+            }
+            item = ZoteroPane.getSelectedItems()[0];
+        }
 
         const text = "Adding publication " + item.getField("title") + " to BibSonomy...";
         new ztoolkit.ProgressWindow(config.addonName)
@@ -133,19 +167,10 @@ export class HelperFactory {
             })
             .show();
 
-
-        const user = getPref("username");
-        const apiToken = getPref("apiToken");
-        const defaultGroup = getPref("defaultGroup")
-
-        if (!user || !apiToken || !defaultGroup || typeof user !== 'string' || typeof apiToken !== 'string' || typeof defaultGroup !== 'string') {
-            ztoolkit.getGlobal("alert")("Error: Please fill in your BibSonomy credentials in the preferences.");
-            return;
-        }
-
         try {
-            const post = await syncItem(item, user, apiToken, defaultGroup);
+            const post = await syncItemDefault(item, force_update);
             ztoolkit.log(post)
+            const user = getPref("username");
             return `${config.bibsonomyBaseURL}/bibtex/${post.bibtex.interhash}/${user}`;
         } catch (error: any) {
             ztoolkit.log(error);
@@ -155,7 +180,9 @@ export class HelperFactory {
                 ztoolkit.getGlobal("alert")("Error: Unauthorized access. Please check your credentials.");
                 setPref("authenticated", false);
             } else if (error instanceof DuplicateItemError) {
-                ztoolkit.getGlobal("alert")("Error: Duplicate item detected, a publication with the same BibTeX key already exists in your BibSonomy account.");
+                if (notifyDuplicate) {
+                    ztoolkit.getGlobal("alert")("Error: Duplicate item detected, a publication with the same BibTeX key already exists in your BibSonomy account.");
+                }
             } else {
                 ztoolkit.getGlobal("alert")(`Error: ${error.message}`);
             }
@@ -184,5 +211,40 @@ export class HelperFactory {
                 type: "success",
             })
             .show();
+    }
+
+    static async deleteEntry(item: Zotero.Item | null = null) {
+        // Get the post the user is currently viewing
+        if (!item) {
+            if (ZoteroPane.getSelectedItems().length === 0) {
+                ztoolkit.getGlobal("alert")("Error: No item selected.");
+                return;
+            }
+            item = ZoteroPane.getSelectedItems()[0];
+        }
+
+        const text = "Deleting publication " + item.getField("title") + " from BibSonomy...";
+        new ztoolkit.ProgressWindow(config.addonName)
+            .createLine({
+                text: text,
+                type: "success",
+            })
+            .show();
+
+        try {
+            await deleteItemOnline(item);
+            return;
+        } catch (error: any) {
+            ztoolkit.log(error);
+            ztoolkit.log(error.message);
+            ztoolkit.log(error.stack);
+            if (error instanceof UnauthorizedError) {
+                ztoolkit.getGlobal("alert")("Error: Unauthorized access. Please check your credentials.");
+                setPref("authenticated", false);
+            } else {
+                ztoolkit.getGlobal("alert")(`Error: ${error.message}`);
+            }
+            return "";
+        }
     }
 }

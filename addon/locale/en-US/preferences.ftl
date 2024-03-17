@@ -14,6 +14,7 @@ pref-sync-auto = Automatically synchronize full library
 # pref-sync-auto-description = If selected, the full library will be synchronized automatically. 
 pref-sync-manual = Synchronize library manually
 # pref-sync-manual-description = If selected, you can synchronize the library manually by clicking the "Synchronize" button in the library tab.
+pref-sync-semi-auto = Synchronize new publications manually, update existing publications automatically
 
 pref-default-group-description = The default group new publications will be added to.
 pref-default-group-private = Private
