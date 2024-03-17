@@ -8,6 +8,13 @@ This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seemle
 
 ## Features
 
+- Sync items from Zotero to BibSonomy ✅
+- Update items in BibSonomy if they are updated in Zotero ✅
+- Automatically sync items when they are added or updated ✅
+- Delete items in BibSonomy if they are deleted in Zotero ✅
+- Get Share URL for a publication ✅
+
+
 ## Working: 
 - [x] Sync item from Zotero to BibSonomy, including PDF attachments
 - [x] Update item in BibSonomy if it is updated in Zotero, including PDF attachments 
