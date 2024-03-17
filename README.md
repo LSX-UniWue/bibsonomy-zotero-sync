@@ -20,8 +20,8 @@ MVP:
 - [x] Use privNote to link to the item in BibSonomy
 - [x] Only show sync button if manual sync is enabled
 - [x] Move server URL to config
-- [ ] Add listeners for item updates and deletions
-- [ ] Add listeners to pdf attachment updates
+- [x] Add listeners for item updates and deletions
+- [x] Add listeners to pdf attachment updates
 - [ ] Add a feature list
 - [ ] Add sync on startup and shutdown
 
