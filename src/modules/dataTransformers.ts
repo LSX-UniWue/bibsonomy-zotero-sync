@@ -17,7 +17,7 @@ export {
  */
 function createBibsonomyPostFromItem(item: Zotero.Item, username: string, group: string): BibsonomyPost {
     const bibtex = parseZoteroToBibsonomy(item);
-    const normalizedTags = item.getTags().map(tag => ({ "name": tag.tag.replace(/\s/g, "_") }));
+    const normalizedTags = item.getTags().map(tag => ({ "name": tag.tag.replace(/\s/g, "") }));
     if (normalizedTags.filter(tag => tag.name === config.postTag).length === 0) {
         normalizedTags.push({ "name": config.postTag });
     }

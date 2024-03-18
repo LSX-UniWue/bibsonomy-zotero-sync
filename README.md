@@ -31,6 +31,13 @@ MVP:
 - [x] Add listeners for item updates and deletions
 - [x] Add listeners to pdf attachment updates
 - [x] Add sync on startup and shutdown
+- [ ] Write Zotero/Bibsonomy Type mapping
+- [ ] Handle Emojis in tags and other fields
+- [ ] Reorganize methods to minimize cross-file dependencies
+- [ ] Standardize error handling
+- [ ] Standardize logging
+- [ ] Localize all strings
+- [ ] Move repo to DMIR Account
 - [ ] Add a feature list
 
 Next:
