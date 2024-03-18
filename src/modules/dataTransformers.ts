@@ -169,7 +169,7 @@ function generateBibtexKey(item: Zotero.Item): string {
     // Extract the first word of the title
     const firstWordOfTitle = item.getField('title').split(" ")[0] || 'Untitled';
 
-    return `${authorLastName}${publicationYear}-${firstWordOfTitle}`;
+    return `${authorLastName}${publicationYear}${firstWordOfTitle}`;
 }
 
 /**
