@@ -4,7 +4,7 @@
 [![bibsonomy target version](https://custom-icon-badges.demolab.com/badge/Bibsonomy-4-blue?style=flat-square&logo=bibsonomy)](https://www.bibsonomy.org)
 [![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github)](https://github.com/windingwind/zotero-plugin-template)
 
-This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seemlessly with [BibSonomy](https://www.bibsonomy.org/).
+This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seamlessly with [BibSonomy](https://www.bibsonomy.org/).
 
 ## Features
 
@@ -41,12 +41,13 @@ MVP:
 - [ ] Add a feature list
 
 Next:
-- [ ] Find way to export the PDFs with Annotations
+- [ ] Find way to export the PDFs with Annotations (Zotero.PDFWorker.export(itemID, path, isPriority, password, transfer);)
 - [ ] Add mechanism to update local items from server
 - [ ] Add mechanism to merge local and server items
 - [ ] Add folder support
 - [ ] Delete local items if they are deleted on the server (or ask the user)
     - [ ] Add no sync option (via tag or collection)
+- [ ] Add support for group choices
 
 ## About BibSonomy
 
