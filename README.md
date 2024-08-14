@@ -32,12 +32,12 @@ MVP:
 - [x] Add listeners to pdf attachment updates
 - [x] Add sync on startup and shutdown
 - [ ] Write Zotero/Bibsonomy Type mapping
-- [ ] Handle Emojis in tags and other fields
+- [ ] Handle Emojis in tags and other fields -> Use :emoji: encoding
 - [ ] Reorganize methods to minimize cross-file dependencies
 - [ ] Standardize error handling
 - [ ] Standardize logging
 - [ ] Localize all strings
-- [ ] Move repo to DMIR Account
+- [x] Move repo to DMIR Account
 - [ ] Add a feature list
 
 Next:
