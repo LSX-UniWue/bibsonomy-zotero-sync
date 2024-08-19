@@ -34,7 +34,7 @@
   },
   "homepage": "https://github.com/tomvoelker/bibsonomy-zotero-sync#readme",
   "dependencies": {
-    "zotero-plugin-toolkit": "^2.3.26"
+    "zotero-plugin-toolkit": "^3.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.4",
