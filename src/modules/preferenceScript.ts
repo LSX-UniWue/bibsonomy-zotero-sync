@@ -83,7 +83,7 @@ async function getUserGroups() {
     const data = await response.json();
 
     // Assuming the response has a structure where groups are an array of objects with a "name" property
-    if (!data.user.groups) {
+    if (!data.user || !data.user.groups) {
       ztoolkit.log(`No groups found for user ${username}`);
       return [];
     }

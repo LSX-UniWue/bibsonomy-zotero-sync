@@ -220,12 +220,16 @@ async function addBibsonomyMetadataToItem(item: Zotero.Item, postingTag: string,
     }
 
     // Construct the metadata note content.
-    const noteContent = `---------  BibSonomy Metadata  ---------
----Do not change or delete this note!---
-interhash: ${interhash}
-intrahash: ${intrahash}
-syncdate: ${new Date().toISOString()}
-----------------------------------------`;
+    const noteContent = `<div data-schema-version="9">
+    <h2>BibSonomy Metadata</h2>
+    <p><strong>Warning:</strong> Do not change or delete this note!</p>
+    <hr>
+    <p><strong>interhash:</strong> ${interhash}</p>
+    <p><strong>intrahash:</strong> ${intrahash}</p>
+    <p><strong>syncdate:</strong> ${new Date().toISOString()}</p>
+    <hr>
+    <p><em>This note is automatically generated and managed by the BibSonomy plugin.</em></p>
+    </div>`;
 
     // Check for an existing BibSonomy metadata note.
     const noteID = item.getNotes().find(noteID => {

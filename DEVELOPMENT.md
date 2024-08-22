@@ -38,6 +38,9 @@ Start development server with `npm start`, it will:
   - If `src/**` changed, run esbuild and reload
   - If `addon/**` has changed, rebuild the plugin (in development mode) and reload
 
+>[!NOTE]
+>In the `dev` environment [biblicious.org](https://biblicious.org) is used as the development server so make sure you have access to it! 
+
 ### 4 Build
 
 Run `npm run build` to build the plugin in production mode, and the xpi for installation and the built code is under `build` folder.

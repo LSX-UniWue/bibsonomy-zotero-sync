@@ -26,8 +26,8 @@ This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seamle
 ## TODOs
 
 Minimal Viable Product: 
-- [ ] Change URL to biblicious when in Dev Mode 
-- [ ] Fix URL clipboard copying 
+- [X] Change URL to biblicious when in Dev Mode 
+- [X] Fix URL clipboard copying 
 - [ ] Clean up notification messages to a useful amount
 - [x] Implement get Share URL for a publication
 - [x] Use privNote to link to the item in BibSonomy

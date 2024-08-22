@@ -5,6 +5,12 @@ import { HelperFactory } from "./connector";
 
 export { itemAddedListener, itemModifiedListener, itemDeletedListener };
 
+/**
+ * Called when a (sub)-item is added to the Zotero library
+ * Syncs the item to the BibSonomy account
+ * This is only relevant for attachments, the "main" item is synced with ???
+ * @param ids - The IDs of the items to sync
+ */
 async function itemAddedListener(ids: number[] | string[]) {
     if (getPref("syncPreference") !== "auto") {
         ztoolkit.log("Automatic sync is not enabled, skipping sync");
@@ -31,9 +37,10 @@ async function itemAddedListener(ids: number[] | string[]) {
                 ztoolkit.log("Item is an attachment, syncing");
                 const parentID = addedItem.parentID;
                 if (parentID === undefined || parentID === false) {
-                    ztoolkit.log("ParentID is undefined");
+                    ztoolkit.log("ParentID is undefined, skipping sync");
                     continue;
                 }
+                // Using the itemModifiedListener to sync the parent item
                 await itemModifiedListener([parentID]);
             } else {
                 ztoolkit.log("Modified Item is not an attachment, skipping sync");
@@ -46,6 +53,11 @@ async function itemAddedListener(ids: number[] | string[]) {
     }
 }
 
+/**
+ * Called when an item is modified in the Zotero library
+ * Updates the corresponding post(s) on the BibSonomy account
+ * @param ids - The IDs of the items to update
+ */
 async function itemModifiedListener(ids: number[] | string[]) {
     //Check if the user is authenticated and has enabled the automatic or semi-automatic sync
     if (getPref("authenticated") !== true) {
@@ -106,6 +118,11 @@ async function itemModifiedListener(ids: number[] | string[]) {
     }
 }
 
+/**
+ * Called when an item is deleted from the Zotero library
+ * Deletes the corresponding post(s) from the BibSonomy account
+ * @param ids - The IDs of the items to delete
+ */
 async function itemDeletedListener(ids: number[] | string[]) {
     //Check if the user is authenticated and has enabled the automatic sync    
     if (getPref("authenticated") !== true) {

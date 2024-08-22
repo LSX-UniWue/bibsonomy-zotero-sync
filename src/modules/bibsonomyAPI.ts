@@ -50,6 +50,7 @@ async function makeBibsonomyRequest(method: 'POST' | 'PUT', url: string, data: a
  */
 async function postEntry(item: Zotero.Item, username: string, apikey: string, group: string): Promise<BibsonomyPost> {
     const post = createBibsonomyPostFromItem(item, username, group);
+    ztoolkit.log(`Posting entry: ${JSON.stringify(post)}`);
     const data = { "post": post };
 
     const responseText = await makeBibsonomyRequest('POST', `${Zotero[config.addonInstance].data.baseURL}/api/users/${username}/posts`, data, username, apikey);
