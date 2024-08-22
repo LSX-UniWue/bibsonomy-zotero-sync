@@ -41,6 +41,9 @@ Start development server with `npm start`, it will:
 >[!NOTE]
 >In the `dev` environment [biblicious.org](https://biblicious.org) is used as the development server so make sure you have access to it! 
 
+>[!WARNING]
+>If the plugin crashes during development, you need to fully close Zotero before running `npm start` again! Otherwise hot reloading will not work!
+
 ### 4 Build
 
 Run `npm run build` to build the plugin in production mode, and the xpi for installation and the built code is under `build` folder.

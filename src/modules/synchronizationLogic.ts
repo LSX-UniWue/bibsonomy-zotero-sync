@@ -2,6 +2,7 @@ import { getEntry, postEntry, updateBibsonomyPost } from './bibsonomyAPI';
 import { getPref } from '../utils/prefs';
 import { config } from '../../package.json';
 import { handleHttpResponseError } from './bibsonomyAPI';
+import { getString } from '../utils/locale';
 
 export { syncItemDefault, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem, syncAllItems }
 
@@ -44,7 +45,7 @@ async function syncItemDefault(item: Zotero.Item, force_update: boolean = false)
     const defaultGroup = getPref("defaultGroup")
 
     if (!user || !apiToken || !defaultGroup || typeof user !== 'string' || typeof apiToken !== 'string' || typeof defaultGroup !== 'string') {
-        ztoolkit.getGlobal("alert")("Error: Please fill in your BibSonomy credentials in the preferences.");
+        ztoolkit.getGlobal("alert")(getString("alert-credentials-not-set"));
         throw new Error("BibSonomy credentials not set");
     }
     return await syncItem(item, user, apiToken, defaultGroup, force_update);
@@ -55,7 +56,7 @@ async function deleteItemOnline(item: Zotero.Item): Promise<void> {
     const apiToken = getPref("apiToken");
 
     if (!user || !apiToken || typeof user !== 'string' || typeof apiToken !== 'string') {
-        ztoolkit.getGlobal("alert")("Error: Please fill in your BibSonomy credentials in the preferences.");
+        ztoolkit.getGlobal("alert")(getString("alert-credentials-not-set"));
         throw new Error("BibSonomy credentials not set");
     }
 

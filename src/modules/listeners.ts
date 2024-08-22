@@ -2,6 +2,7 @@ import { getPref, setPref } from "../utils/prefs";
 import { config } from "../../package.json";
 import { syncItemDefault, deleteItemOnline, checkIfItemIsOnline } from "../modules/synchronizationLogic";
 import { HelperFactory } from "./connector";
+import { getString } from "../utils/locale";
 
 export { itemAddedListener, itemModifiedListener, itemDeletedListener };
 
@@ -20,7 +21,7 @@ async function itemAddedListener(ids: number[] | string[]) {
     if (getPref("authenticated") !== true) {
         ztoolkit.log("User is not authenticated, skipping sync");
         new ztoolkit.ProgressWindow(config.addonName).createLine({
-            text: "User is not authenticated, skipping sync",
+            text: getString("progress-unauthorized-error"),
             type: "error",
         });
         return;
@@ -63,7 +64,7 @@ async function itemModifiedListener(ids: number[] | string[]) {
     if (getPref("authenticated") !== true) {
         ztoolkit.log("User is not authenticated, skipping sync");
         new ztoolkit.ProgressWindow(config.addonName).createLine({
-            text: "User is not authenticated, skipping sync",
+            text: getString("progress-unauthorized-error"),
             type: "error",
         });
         return;
@@ -73,7 +74,7 @@ async function itemModifiedListener(ids: number[] | string[]) {
     const apiToken = getPref("apiToken");
 
     if (!user || !apiToken || typeof user !== 'string' || typeof apiToken !== 'string') {
-        ztoolkit.getGlobal("alert")("Error: Please fill in your BibSonomy credentials in the preferences.");
+        ztoolkit.getGlobal("alert")(getString("alert-credentials-not-set"));
         throw new Error("BibSonomy credentials not set");
     }
 
@@ -128,7 +129,7 @@ async function itemDeletedListener(ids: number[] | string[]) {
     if (getPref("authenticated") !== true) {
         ztoolkit.log("User is not authenticated, skipping sync");
         new ztoolkit.ProgressWindow(config.addonName).createLine({
-            text: "User is not authenticated, skipping sync",
+            text: getString("progress-unauthorized-error"),
             type: "error",
         });
         return;
@@ -138,7 +139,7 @@ async function itemDeletedListener(ids: number[] | string[]) {
     const apiToken = getPref("apiToken");
 
     if (!user || !apiToken || typeof user !== 'string' || typeof apiToken !== 'string') {
-        ztoolkit.getGlobal("alert")("Error: Please fill in your BibSonomy credentials in the preferences.");
+        ztoolkit.getGlobal("alert")(getString("alert-credentials-not-set"));
         throw new Error("BibSonomy credentials not set");
     }
 

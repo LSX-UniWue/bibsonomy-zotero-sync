@@ -117,7 +117,7 @@ export class UIFactory {
                 id: "zotero-itemmenu-authenticate",
                 label: getString("menuitem-authenticate-label"),
                 commandListener: (ev) => {
-                    ztoolkit.getGlobal("alert")("Please authenticate with BibSonomy to use this feature. Go to the preferences to fill in your BibSonomy credentials.");
+                    ztoolkit.getGlobal("alert")(getString("alert-unauthorized"));
                 },
                 icon: menuIcon,
             });
@@ -157,16 +157,15 @@ export class HelperFactory {
         // Get the post the user is currently viewing
         if (!item) {
             if (ZoteroPane.getSelectedItems().length === 0) {
-                ztoolkit.getGlobal("alert")("Error: No item selected.");
+                ztoolkit.getGlobal("alert")(getString("alert-no-item-selected"));
                 return;
             }
             item = ZoteroPane.getSelectedItems()[0];
         }
 
-        const text = "Adding publication " + item.getField("title") + " to BibSonomy...";
         new ztoolkit.ProgressWindow(config.addonName)
             .createLine({
-                text: text,
+                text: getString("progress-sync-entry-text", { args: { title: item.getField("title") } }),
                 type: "success",
             })
             .show();
@@ -181,14 +180,14 @@ export class HelperFactory {
             ztoolkit.log(error.message);
             ztoolkit.log(error.stack);
             if (error instanceof UnauthorizedError) {
-                ztoolkit.getGlobal("alert")("Error: Unauthorized access. Please check your credentials.");
+                ztoolkit.getGlobal("alert")(getString("alert-unauthorized"));
                 setPref("authenticated", false);
             } else if (error instanceof DuplicateItemError) {
                 if (notifyDuplicate) {
-                    ztoolkit.getGlobal("alert")("Error: Duplicate item detected, a publication with the same BibTeX key already exists in your BibSonomy account.");
+                    ztoolkit.getGlobal("alert")(getString("alert-duplicate-item"));
                 }
             } else {
-                ztoolkit.getGlobal("alert")(`Error: ${error.message}`);
+                ztoolkit.getGlobal("alert")(getString("alert-unexpected-error", { args: { message: error.message } }));
             }
             return "";
         }
@@ -199,9 +198,10 @@ export class HelperFactory {
         if (!link || link === "") {
             new ztoolkit.ProgressWindow(config.addonName)
                 .createLine({
-                    text: "Error: Publication could not be synced.",
+                    text: getString("progress-sync-entry-error"),
                     type: "error",
                 })
+                .show();
             return;
         }
         new ztoolkit.Clipboard()
@@ -211,7 +211,7 @@ export class HelperFactory {
         // Give a success message via a progress window
         new ztoolkit.ProgressWindow(config.addonName)
             .createLine({
-                text: "Publication synced successfully! (Link copied to clipboard)",
+                text: getString("progress-sync-entry-success"),
                 type: "success",
             })
             .show();
@@ -221,13 +221,13 @@ export class HelperFactory {
         // Get the post the user is currently viewing
         if (!item) {
             if (ZoteroPane.getSelectedItems().length === 0) {
-                ztoolkit.getGlobal("alert")("Error: No item selected.");
+                ztoolkit.getGlobal("alert")(getString("alert-no-item-selected"));
                 return;
             }
             item = ZoteroPane.getSelectedItems()[0];
         }
 
-        const text = "Deleting publication " + item.getField("title") + " from BibSonomy...";
+        const text = getString("progress-delete-entry-text", { args: { title: item.getField("title") } });
         new ztoolkit.ProgressWindow(config.addonName)
             .createLine({
                 text: text,
@@ -243,10 +243,10 @@ export class HelperFactory {
             ztoolkit.log(error.message);
             ztoolkit.log(error.stack);
             if (error instanceof UnauthorizedError) {
-                ztoolkit.getGlobal("alert")("Error: Unauthorized access. Please check your credentials.");
+                ztoolkit.getGlobal("alert")(getString("alert-unauthorized"));
                 setPref("authenticated", false);
             } else {
-                ztoolkit.getGlobal("alert")(`Error: ${error.message}`);
+                ztoolkit.getGlobal("alert")(getString("alert-unexpected-error", { args: { message: error.message } }));
             }
             return "";
         }

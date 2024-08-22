@@ -3,6 +3,7 @@ import { config } from "../../package.json";
 import { logError, logProgress } from '../utils/logging';
 import { createBibsonomyPostFromItem } from './dataTransformers';
 import { checkIfItemIsOnline, getBibsonomyMetadataFromItem } from './synchronizationLogic';
+import { getString } from '../utils/locale';
 
 export { postEntry, updateBibsonomyPost, getEntry, uploadAllFilesToEntry, uploadFileToEntry, deleteAllFilesFromEntry, deleteFileFromEntry, handleHttpResponseError };
 
@@ -121,7 +122,7 @@ async function uploadAllFilesToEntry(username: string, apikey: string, resourceh
     const attachments = item.getAttachments();
     const title = item.getField('title');
     const popup = new ztoolkit.ProgressWindow(config.addonName).createLine({
-        text: `Uploading attachments for ${title}`,
+        text: getString("progress-upload-files-text", { args: { title: title } }),
         progress: 0
     }).show(-1);
 
