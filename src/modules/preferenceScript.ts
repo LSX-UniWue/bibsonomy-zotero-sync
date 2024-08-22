@@ -28,18 +28,23 @@ async function updatePrefsUI() {
   if (!authenticated) {
     authenticated = false;
   }
-  addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-pref-auth-warning`)?.setAttribute("hidden", authenticated!.toString());
+  const warningElement = addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-pref-auth-warning`);
+  warningElement?.setAttribute("hidden", (!authenticated).toString());
 
   ztoolkit.log("Updating preferences UI");
   const groups = await getUserGroups(); // Assuming this function fetches the groups
   const menupop = addon.data.prefs!.window.document.querySelector<HTMLElement>(
-    `#zotero-prefpane-${config.addonRef}-default-group-popup`
+    `#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-default-group-popup`
   );
 
-  // Remove the waiting item 
-  menupop?.removeChild(addon.data.prefs!.window.document.querySelector<HTMLElement>(
-    `#zotero-prefpane-${config.addonRef}-default-group-waiting`
-  )!);
+  // Update selector for waiting item
+  const waitingItem = addon.data.prefs!.window.document.querySelector<HTMLElement>(
+    `#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-default-group-waiting`
+  );
+  if (waitingItem && menupop) {
+    menupop.removeChild(waitingItem);
+  }
+
   // Dynamically add new menu items
   groups.forEach((group: string) => {
     const menuitem = addon.data.prefs!.window.document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", "menuitem");
@@ -67,7 +72,7 @@ async function getUserGroups() {
 
   const base64Credentials = btoa(username + ':' + apiToken);
 
-  headers.append('Authorization', `Basic ${base64Credentials}`); // Replace `yourUsername` and `yourApiToken` accordingly
+  headers.append('Authorization', `Basic ${base64Credentials}`);
   headers.append('Content-Type', 'application/json');
 
   try {
@@ -95,7 +100,7 @@ async function getUserGroups() {
     return groups;
   } catch (error) {
     ztoolkit.log(`Error fetching user groups: ${error}`);
-    return []; // Return an empty array or handle the error appropriately
+    return [];
   }
 }
 
@@ -126,7 +131,7 @@ async function checkUserAuth() {
 
   const base64Credentials = btoa(username + ':' + apiToken);
 
-  headers.append('Authorization', `Basic ${base64Credentials}`); // Replace `yourUsername` and `yourApiToken` accordingly
+  headers.append('Authorization', `Basic ${base64Credentials}`);
   headers.append('Content-Type', 'application/json');
 
   try {
@@ -154,26 +159,35 @@ async function checkUserAuth() {
 function updateAuthUi() {
   const authenticated = getPref("authenticated");
   const messageString = getString(`pref-auth-check-info-${authenticated ? "success" : "failure"}`);
-  addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-auth-check-info`)?.setAttribute("value", messageString);
-  addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-pref-auth-warning`)?.setAttribute("hidden", authenticated!.toString());
+  const infoElement = addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-auth-check-info`);
+
+  if (infoElement) {
+    infoElement.textContent = messageString;
+    infoElement.classList.remove("success", "failure");
+    infoElement.classList.add(authenticated ? "success" : "failure");
+  }
+
+  const warningElement = addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-pref-auth-warning`);
+  warningElement?.setAttribute("hidden", authenticated.toString());
 }
 
+
 function bindPrefEvents() {
-  addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-username`)
+  addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-username`)
     ?.addEventListener("focusout", async (e) => {
       ztoolkit.log(e);
       await checkUserAuth();
       updateAuthUi();
     });
 
-  addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-apikey`)
+  addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-apikey`)
     ?.addEventListener("focusout", async (e) => {
       ztoolkit.log(e);
       await checkUserAuth();
       updateAuthUi();
     });
 
-  addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-auth-check`)
+  addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-auth-check`)
     ?.addEventListener("click", async (e) => {
       ztoolkit.log(e);
       await checkUserAuth();
@@ -181,7 +195,7 @@ function bindPrefEvents() {
     });
 
   ztoolkit.log("Registering sync preference change event")
-  addon.data.prefs!.window.document.querySelectorAll(`#zotero-prefpane-${config.addonRef}-sync-preference radio`).forEach((radioButton) => {
+  addon.data.prefs!.window.document.querySelectorAll(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-sync-preference radio`).forEach((radioButton) => {
     radioButton.addEventListener("click", (e) => {
       ztoolkit.log(e);
       setPref("syncPreference", radioButton.getAttribute("value")!);

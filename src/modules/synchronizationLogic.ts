@@ -220,6 +220,8 @@ async function addBibsonomyMetadataToItem(item: Zotero.Item, postingTag: string,
     }
 
     // Construct the metadata note content.
+    // ATT: Modifying this string will break the sync functionality! 
+    // IF a change is made, also update the regex in the getBibsonomyMetadataFromItem function below
     const noteContent = `<div data-schema-version="9">
     <h2>BibSonomy Metadata</h2>
     <p><strong>Warning:</strong> Do not change or delete this note!</p>
@@ -259,11 +261,22 @@ function getBibsonomyMetadataFromItem(item: Zotero.Item): { interhash: string, i
     for (const noteID of notes) {
         const note = Zotero.Items.get(noteID);
         const noteContent = note.getNote();
-        const matches = noteContent.match(/interhash:\s*(.+)\s*intrahash:\s*(.+)\s*syncdate:\s*(.+)/);
 
-        if (matches && matches.length === 4) {
-            // Return the captured groups if the regular expression matches
-            return { interhash: matches[1], intrahash: matches[2], syncdate: matches[3] };
+        // Check if the note contains BibSonomy Metadata
+        if (noteContent.includes('BibSonomy Metadata')) {
+            // Extract interhash
+            const interhashMatch = noteContent.match(/<strong>interhash:<\/strong>\s*([^<]+)/);
+            const interhash = interhashMatch ? interhashMatch[1].trim() : "";
+
+            // Extract intrahash
+            const intrahashMatch = noteContent.match(/<strong>intrahash:<\/strong>\s*([^<]+)/);
+            const intrahash = intrahashMatch ? intrahashMatch[1].trim() : "";
+
+            // Extract syncdate
+            const syncdateMatch = noteContent.match(/<strong>syncdate:<\/strong>\s*([^<]+)/);
+            const syncdate = syncdateMatch ? syncdateMatch[1].trim() : "";
+
+            return { interhash, intrahash, syncdate };
         }
     }
     return { interhash: "", intrahash: "", syncdate: "" };

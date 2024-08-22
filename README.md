@@ -22,6 +22,7 @@ This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seamle
 - [x] Update item in BibSonomy if it is updated in Zotero, including PDF attachments 
 - [x] Automatically sync items when they are added or updated
 - [x] Delete item in BibSonomy if it is deleted in Zotero
+- [x] Clean up tags and other fields to be BibSonomy compatible
 
 ## TODOs
 
@@ -36,8 +37,8 @@ Minimal Viable Product:
 - [x] Add listeners for item updates and deletions
 - [x] Add listeners to pdf attachment updates
 - [x] Add sync on startup and shutdown
-- [ ] Write Zotero/Bibsonomy Type mapping
-- [ ] Handle Emojis in tags and other fields -> Use :emoji: encoding
+- [X] Write Zotero/Bibsonomy Type mapping
+- [X] Handle Emojis in tags and other fields -> Use :emoji: encoding
 - [ ] Reorganize methods to minimize cross-file dependencies
 - [ ] Standardize error handling
 - [ ] Standardize logging

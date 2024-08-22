@@ -10,6 +10,9 @@ pref-apikey-description = You can find your API key in your BibSonomy settings.
 pref-auth-check = Check authentication
 pref-auth-warning = You are currently not authenticated. Please enter your username and API key to use the BibSonomy Connector.
 
+pref-auth-check-info-success = Authentication successful.
+pref-auth-check-info-failure = Authentication failed. Please check your username and API key and try again.
+
 pref-sync-auto = Automatically synchronize full library
 # pref-sync-auto-description = If selected, the full library will be synchronized automatically. 
 pref-sync-manual = Synchronize library manually
