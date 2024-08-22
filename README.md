@@ -1,8 +1,10 @@
 # Bibsonomy Zotero Sync Plugin
 
-[![zotero target version](https://img.shields.io/badge/Zotero-7-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
-[![bibsonomy target version](https://custom-icon-badges.demolab.com/badge/Bibsonomy-4-blue?style=flat-square&logo=bibsonomy)](https://www.bibsonomy.org)
-[![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github)](https://github.com/windingwind/zotero-plugin-template)
+<p align="center">
+  <a href="https://www.zotero.org"><img src="https://img.shields.io/badge/Zotero-7-green?style=flat-square&logo=zotero&logoColor=CC2936" alt="zotero target version"></a>
+  <a href="https://www.bibsonomy.org"><img src="https://custom-icon-badges.demolab.com/badge/Bibsonomy-4-blue?style=flat-square&logo=bibsonomy" alt="bibsonomy target version"></a>
+  <a href="https://github.com/windingwind/zotero-plugin-template"><img src="https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github" alt="Using Zotero Plugin Template"></a>
+</p>
 
 This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seamlessly with [BibSonomy](https://www.bibsonomy.org/).
 
@@ -23,7 +25,10 @@ This is a plugin for [Zotero](https://www.zotero.org/), connecting Zotero seamle
 
 ## TODOs
 
-MVP: 
+Minimal Viable Product: 
+- [ ] Change URL to biblicious when in Dev Mode 
+- [ ] Fix URL clipboard copying 
+- [ ] Clean up notification messages to a useful amount
 - [x] Implement get Share URL for a publication
 - [x] Use privNote to link to the item in BibSonomy
 - [x] Only show sync button if manual sync is enabled
@@ -40,14 +45,8 @@ MVP:
 - [x] Move repo to DMIR Account
 - [ ] Add a feature list
 
-Next:
-- [ ] Find way to export the PDFs with Annotations (Zotero.PDFWorker.export(itemID, path, isPriority, password, transfer);)
-- [ ] Add mechanism to update local items from server
-- [ ] Add mechanism to merge local and server items
-- [ ] Add folder support
-- [ ] Delete local items if they are deleted on the server (or ask the user)
-    - [ ] Add no sync option (via tag or collection)
-- [ ] Add support for group choices
+## Development
+If you want to contribute to this plugin, please have a look at the [Development Guide](./DEVELOPMENT.md).
 
 ## About BibSonomy
 

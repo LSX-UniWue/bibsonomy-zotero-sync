@@ -175,7 +175,7 @@ export class HelperFactory {
             const post = await syncItemDefault(item, force_update);
             ztoolkit.log(post)
             const user = getPref("username");
-            return `${config.bibsonomyBaseURL}/bibtex/${post.bibtex.interhash}/${user}`;
+            return `${Zotero[config.addonInstance].data.baseURL}/bibtex/${post.bibtex.interhash}/${user}`;
         } catch (error: any) {
             ztoolkit.log(error);
             ztoolkit.log(error.message);

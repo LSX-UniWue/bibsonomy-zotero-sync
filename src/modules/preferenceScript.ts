@@ -61,7 +61,7 @@ async function getUserGroups() {
   ztoolkit.log(`Fetching groups for user ${username}`);
 
   // Define the URL and the credentials for the API call
-  const url = `${config.bibsonomyBaseURL}/api/users/${username}`;
+  const url = `${Zotero[config.addonInstance].data.baseURL}/api/users/${username}`;
   const headers = new Headers();
 
 
@@ -120,7 +120,7 @@ async function checkUserAuth() {
 
   ztoolkit.log(`Checking user authentication for ${username} with token ${apiToken}`);
 
-  const url = `${config.bibsonomyBaseURL}/api/users/${username}`;
+  const url = `${Zotero[config.addonInstance].data.baseURL}/api/users/${username}`;
   const headers = new Headers();
 
 

@@ -66,7 +66,7 @@ async function deleteItemOnline(item: Zotero.Item): Promise<void> {
 
     const hashes = getBibsonomyMetadataFromItem(item);
 
-    const url = `${config.bibsonomyBaseURL}/api/users/${user}/posts/${hashes.intrahash}`;
+    const url = `${Zotero[config.addonInstance].data.baseURL}/api/users/${user}/posts/${hashes.intrahash}`;
     const response = await fetch(url, {
         method: 'DELETE',
         headers: {

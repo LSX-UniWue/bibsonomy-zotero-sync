@@ -1,5 +1,7 @@
 ## Developement Quick Start Guide
 
+_(Adapted from the Zotero Plugin Templates [README.md](https://github.com/windingwind/zotero-plugin-template?tab=readme-ov-file#quick-start-guide))_
+
 ### 0 Requirement
 
 1. Install a beta version of Zotero: <https://www.zotero.org/support/beta_builds>
@@ -7,8 +9,8 @@
 3. Clone this repo
 
    ```sh
-   git clone TODO
-   cd zotero-plugin-template
+   git clone https://github.com/LSX-UniWue/bibsonomy-zotero-sync.git
+   cd bibsonomy-zotero-sync
    ```
 
 ### 1 Setup Zotero Dev Enviroment

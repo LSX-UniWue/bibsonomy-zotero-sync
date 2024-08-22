@@ -3,6 +3,7 @@ import Addon from "./addon";
 import { config } from "../package.json";
 
 const basicTool = new BasicTool();
+declare const __env__: "production" | "development";
 
 if (!basicTool.getGlobal("Zotero")[config.addonInstance]) {
   defineGlobal("window");
@@ -25,3 +26,7 @@ function defineGlobal(name: string, getter?: () => any) {
     },
   });
 }
+
+// Set the base URL for the BibSonomy API to use biblicious during development
+const baseURL = __env__ === "production" ? config.bibsonomyBaseURL : config.bibliciousBaseURL;
+Zotero[config.addonInstance].data.baseURL = baseURL;
