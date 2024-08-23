@@ -1,11 +1,32 @@
+/**
+ * connector.ts (based on zotero-plugin-template by @windingwind)
+ * 
+ * This module provides the core functionality for connecting and synchronizing
+ * Zotero items with BibSonomy. It includes classes for base functionality,
+ * UI interactions, and helper methods for synchronization.
+ * 
+ * Key components:
+ * - BaseFactory: Handles core functionality like registering notifiers and preferences.
+ * - UIFactory: Manages UI-related operations like registering right-click menu items.
+ * - HelperFactory: Provides methods for syncing entries, getting share URLs, and deleting entries.
+ * 
+ * This is the entry point to retrace the flow of the plugin and implement new features.
+ */
+
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
 import { syncItemDefault, deleteItemOnline, syncAllItems } from "../modules/synchronizationLogic";
 import { getPref, setPref } from "../utils/prefs";
 import { UnauthorizedError, DuplicateItemError } from '../types/errors';
-import { get } from "http";
 import { itemAddedListener, itemModifiedListener, itemDeletedListener } from "../modules/listeners"
 
+/**
+ * Decorator to log method calls and errors in the BibSonomy Connector.
+ * @param target - The target object.
+ * @param propertyKey - The property key.
+ * @param descriptor - The property descriptor.
+ * @returns The property descriptor.
+ */
 function logger(
     target: any,
     propertyKey: string | symbol,
@@ -24,6 +45,11 @@ function logger(
     return descriptor;
 }
 
+/**
+ * BaseFactory
+ * 
+ * Handles core functionality like registering notifiers and preferences.
+ */
 export class BaseFactory {
     @logger
     static registerNotifier() {
@@ -44,28 +70,28 @@ export class BaseFactory {
                 if (type === "item") {
                     switch (event) {
                         case "add":
-                            ztoolkit.log("Item added");
+                            ztoolkit.log(`Item added: ${ids}`);
                             await itemAddedListener(ids);
                             break;
                         case "modify":
-                            ztoolkit.log("Item modified");
+                            ztoolkit.log(`Item modified: ${ids}`);
                             await itemModifiedListener(ids);
                             break;
                         case "trash":
-                            ztoolkit.log("Item trashed");
+                            ztoolkit.log(`Item trashed: ${ids}`);
                             await itemDeletedListener(ids);
                             break;
                         case "delete":
-                            ztoolkit.log("Item deleted");
+                            ztoolkit.log(`Item deleted: ${ids}`);
                             await itemDeletedListener(ids);
                             break;
                         default:
+                            ztoolkit.log(`Unknown event ${event} for item ${ids}`);
                             break;
                     }
                 }
 
-
-                //Print all arguments
+                //Print all arguments (very verbose but helpful for debugging)
                 ztoolkit.log("Notifier called with event: " + event + " type: " + type + " ids: " + ids + " extraData: " + JSON.stringify(extraData));
             },
         };
@@ -106,109 +132,103 @@ export class BaseFactory {
 
 }
 
+/**
+ * UIFactory
+ * 
+ * Manages UI-related operations like registering right-click menu items.
+ */
 export class UIFactory {
     @logger
     static registerRightClickMenuItems() {
         ztoolkit.Menu.unregisterAll();
         const menuIcon = `chrome://${config.addonRef}/content/icons/icon.png`;
-        if (getPref("authenticated") === false) {
-            ztoolkit.Menu.register("item", {
-                tag: "menuitem",
-                id: "zotero-itemmenu-authenticate",
-                label: getString("menuitem-authenticate-label"),
-                commandListener: (ev) => {
-                    ztoolkit.getGlobal("alert")(getString("alert-unauthorized"));
-                },
-                icon: menuIcon,
-            });
-            return; // Do not register other menu items if the user is not authenticated
+
+        if (!getPref("authenticated")) {
+            this.registerAuthenticationMenuItem(menuIcon);
+            return;
         }
 
-        // Get BibSonomy share URL
+        this.registerBibSonomyURLMenuItem(menuIcon);
+        this.registerSyncEntryMenuItem(menuIcon);
+    }
+
+    private static registerAuthenticationMenuItem(menuIcon: string) {
+        ztoolkit.Menu.register("item", {
+            tag: "menuitem",
+            id: "zotero-itemmenu-authenticate",
+            label: getString("menuitem-authenticate-label"),
+            commandListener: () => ztoolkit.getGlobal("alert")(getString("alert-unauthorized")),
+            icon: menuIcon,
+        });
+    }
+
+    private static registerBibSonomyURLMenuItem(menuIcon: string) {
         ztoolkit.Menu.register("item", {
             tag: "menuitem",
             id: "zotero-itemmenu-getBibSonomyURL",
             label: getString("menuitem-getBibSonomyURL-label"),
-            commandListener: (ev) => addon.hooks.onDialogEvents("getShareURL"),
+            commandListener: () => addon.hooks.onDialogEvents("getShareURL"),
             icon: menuIcon,
         });
+    }
 
-        // Sync entry with BibSonomy
-        ztoolkit.log("Sync preference: " + getPref("syncPreference"));
-        if (getPref("syncPreference") === "manual" || getPref("syncPreference") === "semi-auto") {
+    private static registerSyncEntryMenuItem(menuIcon: string) {
+        const syncPreference = getPref("syncPreference");
+        if (syncPreference === "manual" || syncPreference === "semi-auto") {
             ztoolkit.Menu.register("item", {
                 tag: "menuitem",
                 id: "zotero-itemmenu-syncEntry",
                 label: getString("menuitem-syncEntry-label"),
-                commandListener: (ev) => addon.hooks.onDialogEvents("syncEntry"),
+                commandListener: () => addon.hooks.onDialogEvents("syncEntry"),
                 icon: menuIcon,
             });
         }
     }
 }
 
+/**
+ * HelperFactory
+ * 
+ * Provides methods for syncing entries, getting share URLs, and deleting entries.
+ */
 export class HelperFactory {
 
     static async syncAllEntries() {
         await syncAllItems();
     }
 
-    static async syncEntry(item: Zotero.Item | null = null, force_update: boolean = false, notifyDuplicate: boolean = true) {
-        // Get the post the user is currently viewing
-        if (!item) {
-            if (ZoteroPane.getSelectedItems().length === 0) {
-                ztoolkit.getGlobal("alert")(getString("alert-no-item-selected"));
-                return;
-            }
-            item = ZoteroPane.getSelectedItems()[0];
+    private static async getSelectedItem(): Promise<Zotero.Item> {
+        const selectedItems = ZoteroPane.getSelectedItems();
+        if (selectedItems.length === 0) {
+            throw new Error(getString("alert-no-item-selected"));
         }
+        return selectedItems[0];
+    }
+
+    static async syncEntry(item: Zotero.Item | null = null, force_update: boolean = false, notifyDuplicate: boolean = true) {
+        item = item || await this.getSelectedItem();
 
         new ztoolkit.ProgressWindow(config.addonName)
             .createLine({
                 text: getString("progress-sync-entry-text", { args: { title: item.getField("title") } }),
                 type: "success",
-            })
-            .show();
+            }).show();
 
         try {
             const post = await syncItemDefault(item, force_update);
-            ztoolkit.log(post)
-            const user = getPref("username");
-            return `${Zotero[config.addonInstance].data.baseURL}/bibtex/${post.bibtex.interhash}/${user}`;
+            return `${Zotero[config.addonInstance].data.baseURL}/bibtex/${post.bibtex.interhash}/${getPref("username")}`;
         } catch (error: any) {
-            ztoolkit.log(error);
-            ztoolkit.log(error.message);
-            ztoolkit.log(error.stack);
-            if (error instanceof UnauthorizedError) {
-                ztoolkit.getGlobal("alert")(getString("alert-unauthorized"));
-                setPref("authenticated", false);
-            } else if (error instanceof DuplicateItemError) {
-                if (notifyDuplicate) {
-                    ztoolkit.getGlobal("alert")(getString("alert-duplicate-item"));
-                }
-            } else {
-                ztoolkit.getGlobal("alert")(getString("alert-unexpected-error", { args: { message: error.message } }));
-            }
+            this.handleError(error, "sync");
             return "";
         }
     }
 
     static async getShareURL() {
-        const link = await HelperFactory.syncEntry();
-        if (!link || link === "") {
-            new ztoolkit.ProgressWindow(config.addonName)
-                .createLine({
-                    text: getString("progress-sync-entry-error"),
-                    type: "error",
-                })
-                .show();
-            return;
-        }
+        const link = await this.syncEntry();
+        if (!link || link === "") return;
         new ztoolkit.Clipboard()
             .addText(link)
             .copy();
-
-        // Give a success message via a progress window
         new ztoolkit.ProgressWindow(config.addonName)
             .createLine({
                 text: getString("progress-sync-entry-success"),
@@ -218,37 +238,34 @@ export class HelperFactory {
     }
 
     static async deleteEntry(item: Zotero.Item | null = null) {
-        // Get the post the user is currently viewing
-        if (!item) {
-            if (ZoteroPane.getSelectedItems().length === 0) {
-                ztoolkit.getGlobal("alert")(getString("alert-no-item-selected"));
-                return;
-            }
-            item = ZoteroPane.getSelectedItems()[0];
-        }
+        item = item || await this.getSelectedItem();
 
-        const text = getString("progress-delete-entry-text", { args: { title: item.getField("title") } });
         new ztoolkit.ProgressWindow(config.addonName)
             .createLine({
-                text: text,
+                text: getString("progress-delete-entry-text", { args: { title: item.getField("title") } }),
                 type: "success",
-            })
-            .show();
+            }).show();
 
         try {
             await deleteItemOnline(item);
             return;
         } catch (error: any) {
-            ztoolkit.log(error);
-            ztoolkit.log(error.message);
-            ztoolkit.log(error.stack);
-            if (error instanceof UnauthorizedError) {
-                ztoolkit.getGlobal("alert")(getString("alert-unauthorized"));
-                setPref("authenticated", false);
-            } else {
-                ztoolkit.getGlobal("alert")(getString("alert-unexpected-error", { args: { message: error.message } }));
-            }
+            this.handleError(error, "delete");
             return "";
+        }
+    }
+
+    private static handleError(error: unknown, operation: "sync" | "delete") {
+        ztoolkit.log(`Error ${operation}ing entry: ${error}`);
+        if (error instanceof UnauthorizedError) {
+            ztoolkit.getGlobal("alert")(getString("alert-unauthorized"));
+            setPref("authenticated", false);
+        } else if (error instanceof DuplicateItemError && operation === "sync") {
+            ztoolkit.getGlobal("alert")(getString("alert-duplicate-item"));
+        } else if (error instanceof Error) {
+            ztoolkit.getGlobal("alert")(getString("alert-unexpected-error", { args: { message: error.message } }));
+        } else {
+            ztoolkit.getGlobal("alert")(getString("alert-unexpected-error", { args: { message: "Unknown error" } }));
         }
     }
 }

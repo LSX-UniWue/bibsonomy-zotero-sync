@@ -1,3 +1,14 @@
+/**
+ * dataTransformers.ts
+ * 
+ * This module provides functions for transforming data objects between Zotero and BibSonomy.
+ * It includes functions for creating and parsing Bibsonomy posts and entries, as well as
+ * generating BibTeX keys and mapping between Zotero and BibTeX types.
+ * 
+ * These functions are used to prepare data for API requests and to parse responses from the API.
+ * 
+ * Some opinionated decisions are made here, as both systems have different data structures.
+ */
 
 import { config } from "../../package.json";
 const emoji = require("emoji-dictionary");

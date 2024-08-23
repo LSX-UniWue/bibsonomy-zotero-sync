@@ -17,3 +17,9 @@ progress-sync-entry-error = Error: Publication could not be synced.
 progress-delete-entry-text = Deleting publication { $title } from BibSonomy...
 progress-upload-files-text = Uploading attachments for { $title }
 progress-unauthorized-error = User is not authenticated, skipping sync
+
+# Delete confirmation dialog
+dialog-delete-confirm-title = Confirm Online Deletion
+dialog-delete-confirm-message = Do you also want to delete the Post "{ $title }" from your BibSonomy Account?
+dialog-delete-confirm-yes = Yes
+dialog-delete-confirm-no = No

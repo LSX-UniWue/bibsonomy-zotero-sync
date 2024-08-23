@@ -1,4 +1,5 @@
 import { config } from "../../package.json";
+import { getString } from "./locale";
 
 /**
  * Get preference value.
@@ -26,4 +27,19 @@ export function setPref(key: string, value: string | number | boolean) {
  */
 export function clearPref(key: string) {
   return Zotero.Prefs.clear(`${config.prefsPrefix}.${key}`, true);
+}
+
+/**
+ * Helper function to get the user and api token from the preferences
+ * @returns The user and api token
+ */
+export function getAuth(): { user: string, apiToken: string } {
+  const user = getPref("username");
+  const apiToken = getPref("apiToken");
+
+  if (!user || !apiToken || typeof user !== 'string' || typeof apiToken !== 'string') {
+    ztoolkit.getGlobal("alert")(getString("alert-credentials-not-set"));
+    throw new Error("BibSonomy credentials not set");
+  }
+  return { user, apiToken };
 }

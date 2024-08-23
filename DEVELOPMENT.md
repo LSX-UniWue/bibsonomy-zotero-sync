@@ -39,7 +39,10 @@ Start development server with `npm start`, it will:
   - If `addon/**` has changed, rebuild the plugin (in development mode) and reload
 
 >[!NOTE]
->In the `dev` environment [biblicious.org](https://biblicious.org) is used as the development server so make sure you have access to it! 
+> In the `dev` environment [biblicious.org](https://biblicious.org) is used as the development server so make sure you have access to it! 
+
+>[!NOTE]
+> As any `log` statements are automatically removed in production mode, you can feel free to be rather verbose with `ztoolkit.log` statements during development.
 
 >[!WARNING]
 >If the plugin crashes during development, you need to fully close Zotero before running `npm start` again! Otherwise hot reloading will not work!

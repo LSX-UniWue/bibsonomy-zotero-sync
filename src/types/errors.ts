@@ -18,3 +18,10 @@ export class PostNotFoundError extends Error {
         this.name = 'PostNotFoundError';
     }
 }
+
+export class InvalidFormatError extends Error {
+    constructor(message?: string) {
+        super(message || 'Invalid format');
+        this.name = 'InvalidFormatError';
+    }
+}

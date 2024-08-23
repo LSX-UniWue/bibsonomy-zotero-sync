@@ -42,10 +42,13 @@ Minimal Viable Product:
 - [ ] Reorganize methods to minimize cross-file dependencies
 - [ ] Standardize error handling
 - [ ] Standardize logging
-- [ ] Localize all strings
+- [X] Localize all strings
 - [x] Move repo to DMIR Account
+- [ ] Add german translation
 - [ ] Add a feature list
-
+- [ ] Optimize API calls
+    - [ ] Only upload changed files (see [this](https://vscode.dev/github/tomvoelker/bibsonomy-zotero-connector/blob/main/src/modules/bibsonomyAPI.ts#L111))
+    
 ## Development
 If you want to contribute to this plugin, please have a look at the [Development Guide](./DEVELOPMENT.md).
 
