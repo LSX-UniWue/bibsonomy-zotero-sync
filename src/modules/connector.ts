@@ -15,8 +15,8 @@
 
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
-import { syncItemDefault, deleteItemOnline, syncAllItems } from "../modules/synchronizationLogic";
-import { getPref, setPref } from "../utils/prefs";
+import { syncItem, deleteItemOnline, syncAllItems } from "../modules/synchronizationLogic";
+import { getPref, setPref, getAuthWithDefaultGroup } from "../utils/prefs";
 import { UnauthorizedError, DuplicateItemError } from '../types/errors';
 import { itemAddedListener, itemModifiedListener, itemDeletedListener } from "../modules/listeners"
 
@@ -215,8 +215,9 @@ export class HelperFactory {
             }).show();
 
         try {
-            const post = await syncItemDefault(item, force_update);
-            return `${Zotero[config.addonInstance].data.baseURL}/bibtex/${post.bibtex.interhash}/${getPref("username")}`;
+            const { user, apiToken, defaultGroup } = getAuthWithDefaultGroup();
+            const post = await syncItem(item, user, apiToken, defaultGroup, force_update);
+            return `${Zotero[config.addonInstance].data.baseURL}/bibtex/${post.bibtex.interhash}/${user}`;
         } catch (error: any) {
             this.handleError(error, "sync");
             return "";

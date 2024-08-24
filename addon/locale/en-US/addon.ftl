@@ -9,6 +9,7 @@ alert-unauthorized = Credentials not valid, please authenticate again in the pre
 alert-no-item-selected = Error: No item selected.
 alert-duplicate-item = Error: Duplicate item detected, a publication with the same BibTeX key already exists in your BibSonomy account.
 alert-unexpected-error = Error: { $message }
+alert-default-group-not-set = Error: Default group not set. Please set a default group in the preferences.
 
 # Progress windows 
 progress-sync-entry-text = Adding publication { $title } to BibSonomy...

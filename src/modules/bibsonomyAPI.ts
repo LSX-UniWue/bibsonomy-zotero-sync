@@ -16,7 +16,7 @@ import { createBibsonomyPostFromItem } from './dataTransformers';
 import { getString } from '../utils/locale';
 
 
-export { postEntry, updateBibsonomyPost, getEntry, uploadAllFilesToEntry, uploadFileToEntry, deleteAllFilesFromEntry, deleteFileFromEntry, handleHttpResponseError };
+export { postEntry, updateBibsonomyPost, getEntry, deleteEntry, uploadAllFilesToEntry, uploadFileToEntry, deleteAllFilesFromEntry, deleteFileFromEntry, handleHttpResponseError };
 
 // Necessary due to the way Zotero handles imports
 Components.utils.importGlobalProperties(['FormData']);
@@ -103,6 +103,32 @@ async function getEntry(username: string, apikey: string, resourcehash: string):
         throw new InvalidFormatError('Unexpected response format from Bibsonomy API: ' + JSON.stringify(data));
     }
     return data.post as BibsonomyPost;
+}
+
+/**
+ * Deletes an entry from BibSonomy.
+ * 
+ * @param username - The BibSonomy username.
+ * @param apikey - The BibSonomy API key.
+ * @param intrahash - The intrahash of the entry to delete.
+ * @throws {Error} If the deletion fails.
+ */
+async function deleteEntry(username: string, apikey: string, intrahash: string): Promise<void> {
+    const url = `${Zotero[config.addonInstance].data.baseURL}/api/users/${username}/posts/${intrahash}`;
+
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + btoa(username + ':' + apikey)
+        },
+    });
+
+    if (!response.ok) {
+        await handleHttpResponseError(response, 'DELETE', url);
+    }
+
+    ztoolkit.log(`Successfully deleted entry with intrahash: ${intrahash}`);
 }
 
 /**

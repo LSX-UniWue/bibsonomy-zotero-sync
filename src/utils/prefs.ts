@@ -43,3 +43,13 @@ export function getAuth(): { user: string, apiToken: string } {
   }
   return { user, apiToken };
 }
+
+export function getAuthWithDefaultGroup(): { user: string, apiToken: string, defaultGroup: string } {
+  const { user, apiToken } = getAuth();
+  const defaultGroup = getPref("defaultGroup");
+  if (!defaultGroup || typeof defaultGroup !== 'string') {
+    ztoolkit.getGlobal("alert")(getString("alert-default-group-not-set"));
+    throw new Error("Default group not set");
+  }
+  return { user, apiToken, defaultGroup };
+}
