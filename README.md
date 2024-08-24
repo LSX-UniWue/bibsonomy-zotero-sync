@@ -39,7 +39,7 @@ Minimal Viable Product:
 - [x] Add sync on startup and shutdown
 - [X] Write Zotero/Bibsonomy Type mapping
 - [X] Handle Emojis in tags and other fields -> Use :emoji: encoding
-- [ ] Reorganize methods to minimize cross-file dependencies
+- [X] Reorganize methods to minimize cross-file dependencies
 - [ ] Standardize error handling
 - [ ] Standardize logging
 - [X] Localize all strings
@@ -48,7 +48,8 @@ Minimal Viable Product:
 - [ ] Add a feature list
 - [ ] Optimize API calls
     - [ ] Only upload changed files (see [this](https://vscode.dev/github/tomvoelker/bibsonomy-zotero-connector/blob/main/src/modules/bibsonomyAPI.ts#L111))
-    
+- [ ] Add error handling for failed network requests (in dev: Remember to connect to ks, in prod: Add error handling)
+
 ## Development
 If you want to contribute to this plugin, please have a look at the [Development Guide](./DEVELOPMENT.md).
 

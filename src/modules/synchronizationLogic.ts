@@ -8,7 +8,7 @@ import { getEntry, postEntry, updateBibsonomyPost, deleteEntry } from './bibsono
 import { getPref, getAuth, getAuthWithDefaultGroup } from '../utils/prefs';
 import { config } from "../../package.json";
 
-export { syncItem, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem, syncAllItems }
+export { syncItem, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem, syncAllItems, addAttachmentsSyncdateToItem }
 
 /**
  * Synchronizes all items in the user's library with BibSonomy, that are already online.
@@ -97,7 +97,8 @@ async function syncItem(item: Zotero.Item, username: string, apikey: string, gro
         } else if (updatedOffline || force_update) {
             // Update item online
             ztoolkit.log(`Updating ${item.getField('title')} online.`);
-            post = await updateBibsonomyPost(item, hashes.intrahash, username, apikey, group);
+            const updatedAttachments = await getChangedAttachments(item);
+            post = await updateBibsonomyPost(item, updatedAttachments, hashes.intrahash, username, apikey, group);
         } else {
             // No updates needed
             ztoolkit.log(`No updates for ${item.getField('title')}, skipping.`);
@@ -159,6 +160,31 @@ async function wasUpdatedOffline(item: Zotero.Item): Promise<boolean> {
 }
 
 /**
+ * If an item has been updated offline, this function returns the attachments that have been changed.
+ * IMPORTANT: This function can not check for annotations, only the attachments themselves!
+ * 
+ * @param item - The Zotero item to check.
+ * @returns An array of Zotero items that have been changed, empty if no changes have been made.
+ */
+async function getChangedAttachments(item: Zotero.Item): Promise<Zotero.Item[]> {
+    if (!wasUpdatedOffline(item)) return [];
+
+    const lastAttachmentsSyncDate = new Date(getBibsonomyMetadataFromItem(item).attachmentsSyncdate);
+    const changedAttachments: Zotero.Item[] = [];
+    const attachments = item.getAttachments();
+    for (const attachment of attachments) {
+        const attachmentItem = Zotero.Items.get(attachment);
+        if (!attachmentItem.isAttachment() || typeof attachmentItem.getFilePath() !== 'string' || (attachmentItem.getFilePath() as string).split('.').pop() !== 'pdf') continue;
+        const attachmentModified = new Date(attachmentItem.dateModified + "Z");
+        const buffer = 10 * 1000; // 10 seconds buffer
+        if (attachmentModified.getTime() + buffer > lastAttachmentsSyncDate.getTime()) {
+            changedAttachments.push(attachmentItem);
+        }
+    }
+    return changedAttachments;
+}
+
+/**
  * Checks if the given item is available online in BibSonomy.
  * @param item - The Zotero item to check.
  * @param username - The BibSonomy username.
@@ -202,13 +228,14 @@ async function addBibsonomyMetadataToItem(item: Zotero.Item, postingTag: string,
     // Construct the metadata note content.
     // ATT: Modifying this string will break the sync functionality! 
     // IF a change is made, also update the regex in the getBibsonomyMetadataFromItem function below
-    const noteContent = `<div data-schema-version="9">
+    let noteContent = `<div data-schema-version="9">
     <h2>BibSonomy Metadata</h2>
     <p><strong>Warning:</strong> Do not change or delete this note!</p>
     <hr>
     <p><strong>interhash:</strong> ${interhash}</p>
     <p><strong>intrahash:</strong> ${intrahash}</p>
     <p><strong>syncdate:</strong> ${new Date().toISOString()}</p>
+    <p><strong>attachments-syncdate:</strong> na</p>
     <hr>
     <p><em>This note is automatically generated and managed by the BibSonomy plugin.</em></p>
     </div>`;
@@ -223,6 +250,20 @@ async function addBibsonomyMetadataToItem(item: Zotero.Item, postingTag: string,
     const noteItem = noteID ? Zotero.Items.get(noteID) : new Zotero.Item('note');
     if (!noteID) {
         ztoolkit.log('No existing BibSonomy note found, creating a new one');
+    } else {
+        ztoolkit.log('Found existing BibSonomy note, updating it');
+        // We need to keep the attachments-syncdate, so we need to find it first
+        const attachmentsSyncdateMatch = noteItem.getNote().match(/<p><strong>attachments-syncdate:<\/strong>\s*([^<]+)<\/p>/);
+        if (attachmentsSyncdateMatch) {
+            const attachmentsSyncdate = attachmentsSyncdateMatch[1].trim();
+            ztoolkit.log(`Found attachments-syncdate: ${attachmentsSyncdate}`);
+            noteContent = noteContent.replace(
+                /<p><strong>attachments-syncdate:<\/strong>\s*na<\/p>/,
+                `<p><strong>attachments-syncdate:</strong> ${attachmentsSyncdate}</p>`
+            );
+        } else {
+            ztoolkit.log('No attachments-syncdate found, keeping as "na"');
+        }
     }
 
     noteItem.setNote(noteContent);
@@ -231,12 +272,30 @@ async function addBibsonomyMetadataToItem(item: Zotero.Item, postingTag: string,
     ztoolkit.log(`Updated BibSonomy metadata note for item: ${item.getField('title')}`);
 }
 
+async function addAttachmentsSyncdateToItem(item: Zotero.Item, attachmentsSyncdate: string) {
+    const noteID = item.getNotes().find(noteID => {
+        const note = Zotero.Items.get(noteID);
+        return note.getNote().includes('BibSonomy Metadata');
+    });
+
+    if (!noteID) {
+        ztoolkit.log('No existing BibSonomy note found to add attachments-syncdate, this should not happen!');
+        return;
+    }
+
+    const noteItem = Zotero.Items.get(noteID);
+    const noteContent = noteItem.getNote();
+    const newNoteContent = noteContent.replace(/<p><strong>attachments-syncdate:<\/strong>\s*na<\/p>/, `<p><strong>attachments-syncdate:</strong> ${attachmentsSyncdate}</p>`);
+    noteItem.setNote(newNoteContent);
+    await noteItem.saveTx();
+}
+
 /**
  * Retrieves Bibsonomy metadata from a Zotero item.
  * @param item - The Zotero item from which to retrieve the metadata.
- * @returns An object containing the Bibsonomy metadata, including interhash, intrahash, and syncdate.
+ * @returns An object containing the Bibsonomy metadata, including interhash, intrahash, syncdate, and attachmentsSyncdate.
  */
-function getBibsonomyMetadataFromItem(item: Zotero.Item): { interhash: string, intrahash: string, syncdate: string } {
+function getBibsonomyMetadataFromItem(item: Zotero.Item): { interhash: string, intrahash: string, syncdate: string, attachmentsSyncdate: string } {
     const notes = item.getNotes();
     for (const noteID of notes) {
         const note = Zotero.Items.get(noteID);
@@ -256,7 +315,11 @@ function getBibsonomyMetadataFromItem(item: Zotero.Item): { interhash: string, i
             const syncdateMatch = noteContent.match(/<strong>syncdate:<\/strong>\s*([^<]+)/);
             const syncdate = syncdateMatch ? syncdateMatch[1].trim() : "";
 
-            return { interhash, intrahash, syncdate };
+            // Extract attachments-syncdate
+            const attachmentsSyncdateMatch = noteContent.match(/<strong>attachments-syncdate:<\/strong>\s*([^<]+)/);
+            const attachmentsSyncdate = attachmentsSyncdateMatch ? attachmentsSyncdateMatch[1].trim() : "";
+
+            return { interhash, intrahash, syncdate, attachmentsSyncdate };
         }
     }
     return { interhash: "", intrahash: "", syncdate: "" };

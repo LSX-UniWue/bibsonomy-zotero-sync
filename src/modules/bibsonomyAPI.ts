@@ -14,6 +14,7 @@ import { UnauthorizedError, DuplicateItemError, PostNotFoundError, InvalidFormat
 import { config } from "../../package.json";
 import { createBibsonomyPostFromItem } from './dataTransformers';
 import { getString } from '../utils/locale';
+import { addAttachmentsSyncdateToItem } from './synchronizationLogic';
 
 
 export { postEntry, updateBibsonomyPost, getEntry, deleteEntry, uploadAllFilesToEntry, uploadFileToEntry, deleteAllFilesFromEntry, deleteFileFromEntry, handleHttpResponseError };
@@ -29,7 +30,7 @@ Components.utils.importGlobalProperties(['FormData']);
  * @param data - The data to send in the request body.
  * @param username - The username for authentication.
  * @param apikey - The API key for authentication.
- * @returns A promise that resolves to the response from the BibSonomy API.
+ * @returns A promise that resolves to the response from the Bibsonomy API.
  */
 async function makeBibsonomyRequest(method: 'POST' | 'PUT', url: string, data: any, username: string, apikey: string): Promise<BibSonomyPostResponse> {
     const response = await fetch(url, {
@@ -140,14 +141,60 @@ async function deleteEntry(username: string, apikey: string, intrahash: string):
  * @param group - The group of the Bibsonomy post.
  * @returns A promise that resolves to the updated Bibsonomy post.
  */
-async function updateBibsonomyPost(item: Zotero.Item, intrahash: string, username: string, apikey: string, group: string): Promise<BibsonomyPost> {
+async function updateBibsonomyPost(item: Zotero.Item, updatedAttachments: Zotero.Item[], intrahash: string, username: string, apikey: string, group: string): Promise<BibsonomyPost> {
     const post = createBibsonomyPostFromItem(item, username, group);
     const url = `${Zotero[config.addonInstance].data.baseURL}/api/users/${username}/posts/${intrahash}?format=json`;
     const responseText = await makeBibsonomyRequest('PUT', url, { "post": post }, username, apikey);
 
-    // TODO: Implement a logic to check if the files have changed and only upload the changed files!
-    deleteAllFilesFromEntry(username, apikey, responseText.resourcehash);
-    uploadAllFilesToEntry(username, apikey, responseText.resourcehash, item);
+    const currentEntry = await getEntry(username, apikey, responseText.resourcehash);
+    const currentAttachments = currentEntry.documents?.document || [];
+
+    // Get all current attachments, not just updated ones
+    const allItemAttachments = item.getAttachments().map(id => Zotero.Items.get(id));
+    const allItemFilenames = new Set(allItemAttachments.map(att => (att as any).getFilename()));
+    const onlineFilenames = new Set(currentAttachments.map(att => att.filename));
+
+    ztoolkit.log(`Current online attachments: ${JSON.stringify(currentAttachments)}`);
+    ztoolkit.log(`All local attachments: ${JSON.stringify(allItemAttachments)}`);
+    ztoolkit.log(`Updated attachments: ${JSON.stringify(updatedAttachments)}`);
+
+    if (allItemFilenames.size === allItemAttachments.length &&
+        [...allItemFilenames].every(filename => onlineFilenames.has(filename)) &&
+        onlineFilenames.size === allItemFilenames.size) {
+        // Case 1: Perfect matching possible
+        ztoolkit.log(`Perfect matching possible`);
+        for (const attachment of updatedAttachments) {
+            const filename = (attachment as any).getFilename();
+            const onlineAttachment = currentAttachments.find(att => att.filename === filename);
+            if (onlineAttachment) {
+                await deleteFileFromEntry(username, apikey, onlineAttachment.href);
+                await uploadFileToEntry(username, apikey, responseText.resourcehash, attachment.id);
+            }
+        }
+    } else if ([...allItemFilenames].every(filename => !onlineFilenames.has(filename)) &&
+        [...onlineFilenames].every(filename => !allItemFilenames.has(filename))) {
+        // Case 2: Attachments added/deleted offline, but filenames are unambiguous
+        ztoolkit.log(`Attachments added/deleted offline, unambiguous filenames`);
+        // Delete files that are no longer present locally
+        for (const onlineAttachment of currentAttachments) {
+            if (!allItemFilenames.has(onlineAttachment.filename)) {
+                await deleteFileFromEntry(username, apikey, onlineAttachment.href);
+            }
+        }
+        // Upload new files
+        for (const attachment of allItemAttachments) {
+            const filename = (attachment as any).getFilename();
+            if (!onlineFilenames.has(filename)) {
+                await uploadFileToEntry(username, apikey, responseText.resourcehash, attachment.id);
+            }
+        }
+    } else {
+        // Case 3: Ambiguous filenames, use (inefficient) fallback
+        ztoolkit.log(`Ambiguous filenames, use (inefficient) fallback`);
+        await deleteAllFilesFromEntry(username, apikey, responseText.resourcehash);
+        await uploadAllFilesToEntry(username, apikey, responseText.resourcehash, item);
+    }
+
     return getEntry(username, apikey, responseText.resourcehash) as Promise<BibsonomyPost>;
 }
 
@@ -186,6 +233,7 @@ async function uploadAllFilesToEntry(username: string, apikey: string, resourceh
             throw error;
         }
     }
+    addAttachmentsSyncdateToItem(item, new Date().toISOString());
     popup.close();
 }
 
