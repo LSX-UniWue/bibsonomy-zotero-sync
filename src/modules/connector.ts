@@ -205,14 +205,22 @@ export class HelperFactory {
         return selectedItems[0];
     }
 
-    static async syncEntry(item: Zotero.Item | null = null, force_update: boolean = false, notifyDuplicate: boolean = true) {
+    static async syncEntry(item: Zotero.Item | null = null, force_update: boolean = false, notifyDuplicate: boolean = true, isUpdate: boolean = false) {
         item = item || await this.getSelectedItem();
 
-        new ztoolkit.ProgressWindow(config.addonName)
-            .createLine({
+        const progressWindow = new ztoolkit.ProgressWindow(config.addonName);
+        if (isUpdate) {
+            progressWindow.createLine({
+                text: getString("progress-update-entry-text", { args: { title: item.getField("title") } }),
+                type: "success",
+            });
+        } else {
+            progressWindow.createLine({
                 text: getString("progress-sync-entry-text", { args: { title: item.getField("title") } }),
                 type: "success",
-            }).show();
+            });
+        }
+        progressWindow.show(1000);
 
         try {
             const { user, apiToken, defaultGroup } = getAuthWithDefaultGroup();

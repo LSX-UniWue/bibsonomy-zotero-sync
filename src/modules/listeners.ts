@@ -52,7 +52,7 @@ async function itemModifiedListener(ids: number[] | string[]) {
         } else if (checkIfItemIsOnline(modifiedItem, user, apiToken)) {
             ztoolkit.log("Item is online, syncing");
             try {
-                await HelperFactory.syncEntry(modifiedItem, true, false);
+                await HelperFactory.syncEntry(modifiedItem, true, false, true);
             } catch (error) {
                 //TODO: Handle the error
                 ztoolkit.log("Error while syncing item: " + error);

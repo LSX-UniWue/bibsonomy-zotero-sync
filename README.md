@@ -47,8 +47,11 @@ Minimal Viable Product:
 - [ ] Add german translation
 - [ ] Add a feature list
 - [ ] Optimize API calls
-    - [ ] Only upload changed files (see [this](https://vscode.dev/github/tomvoelker/bibsonomy-zotero-connector/blob/main/src/modules/bibsonomyAPI.ts#L111))
+    - [X] Only upload changed files (see [this](https://vscode.dev/github/tomvoelker/bibsonomy-zotero-connector/blob/main/src/modules/bibsonomyAPI.ts#L111))
+    - [ ] Optimize Listeners to only trigger on relevant events
+    - [ ] Find out why the upload/update sometimes triggers twice
 - [ ] Add error handling for failed network requests (in dev: Remember to connect to ks, in prod: Add error handling)
+- [ ] Add a confirmation and progress window when enabling auto sync
 
 ## Development
 If you want to contribute to this plugin, please have a look at the [Development Guide](./DEVELOPMENT.md).
