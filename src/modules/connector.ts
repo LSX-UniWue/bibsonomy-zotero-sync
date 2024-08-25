@@ -264,6 +264,7 @@ export class HelperFactory {
         }
     }
 
+    //TODO: Add more advanced error handling!
     private static handleError(error: unknown, operation: "sync" | "delete") {
         ztoolkit.log(`Error ${operation}ing entry: ${error}`);
         if (error instanceof UnauthorizedError) {

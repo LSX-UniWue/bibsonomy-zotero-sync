@@ -66,6 +66,7 @@ async function deleteItemOnline(item: Zotero.Item): Promise<void> {
 }
 
 /**
+ * TODO: Add more advanced error handling!
  * Synchronizes a Zotero item with its BibSonomy Post, posting it if it's not already online,
  * or updating it based on where the most recent changes occurred (online or offline).
  * @param item The Zotero item to be synchronized.
@@ -322,5 +323,5 @@ function getBibsonomyMetadataFromItem(item: Zotero.Item): { interhash: string, i
             return { interhash, intrahash, syncdate, attachmentsSyncdate };
         }
     }
-    return { interhash: "", intrahash: "", syncdate: "" };
+    return { interhash: "", intrahash: "", syncdate: "", attachmentsSyncdate: "" };
 }
