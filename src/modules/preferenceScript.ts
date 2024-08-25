@@ -6,7 +6,8 @@ import { config } from "../../package.json";
 import { getString } from "../utils/locale";
 import { getPref, setPref, getAuth } from "../utils/prefs";
 import { UIFactory } from "./connector"
-
+import { HelperFactory } from "./connector";
+import { DialogHelper } from "zotero-plugin-toolkit/dist/helpers/dialog";
 
 export async function registerPrefsScripts(_window: Window) {
   // Initialize or update preferences UI
@@ -19,7 +20,7 @@ export async function registerPrefsScripts(_window: Window) {
     addon.data.prefs.window = _window;
   }
 
-  updatePrefsUI();
+  await updatePrefsUI();
   bindPrefEvents();
 }
 
@@ -27,12 +28,22 @@ export async function registerPrefsScripts(_window: Window) {
  * Update the preferences UI by dynamically populating the "default group" dropdown based on the user's groups
  */
 async function updatePrefsUI() {
-  // Dynamically populate the "default group" dropdown based on BibSonomy API
+  // Check authentication status first
+  await checkUserAuth();
+
   const authenticated = getPref("authenticated") || false;
   const warningElement = getElementBySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-pref-auth-warning`);
-  warningElement?.setAttribute("hidden", (!authenticated).toString());
+  warningElement?.setAttribute("hidden", authenticated.toString());
 
   ztoolkit.log("Updating preferences UI");
+
+  // Update sync preference radio buttons
+  const syncPreference = getPref("syncPreference");
+  const syncPreferenceRadiogroup = getElementBySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-sync-preference`) as XULElementRadioGroup;
+  if (syncPreferenceRadiogroup) {
+    syncPreferenceRadiogroup.value = syncPreference;
+  }
+
   const groups = await getUserGroups();
   const menupop = getElementBySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-default-group-popup`);
 
@@ -105,7 +116,7 @@ async function checkUserAuth(): Promise<boolean> {
 function updateAuthUi() {
   const authenticated = getPref("authenticated");
   const messageString = getString(`pref-auth-check-info-${authenticated ? "success" : "failure"}`);
-  const infoElement = addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-auth-check-info`);
+  const infoElement = getElementBySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-auth-check-info`);
 
   if (infoElement) {
     infoElement.textContent = messageString;
@@ -113,7 +124,7 @@ function updateAuthUi() {
     infoElement.classList.add(authenticated ? "success" : "failure");
   }
 
-  const warningElement = addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-pref-auth-warning`);
+  const warningElement = getElementBySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-pref-auth-warning`);
   warningElement?.setAttribute("hidden", authenticated!.toString());
 }
 
@@ -140,15 +151,65 @@ function bindPrefEvents() {
       updateAuthUi();
     });
 
-  ztoolkit.log("Registering sync preference change event")
-  addon.data.prefs!.window.document.querySelectorAll(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-sync-preference radio`).forEach((radioButton) => {
-    radioButton.addEventListener("click", (e) => {
-      ztoolkit.log(e);
-      setPref("syncPreference", radioButton.getAttribute("value")!);
-      UIFactory.registerRightClickMenuItems();
+  const syncPreferenceRadiogroup = addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-sync-preference`) as XULElementRadioGroup;
+
+  // Set initial value
+  const currentPreference = getPref("syncPreference");
+  syncPreferenceRadiogroup.value = currentPreference;
+
+  syncPreferenceRadiogroup.addEventListener("command", async (e) => {
+    e.preventDefault(); // Prevent default behavior
+    const newValue = syncPreferenceRadiogroup.value;
+
+    ztoolkit.log(`Sync preference changed to ${newValue}`);
+
+    if (newValue === "auto" && !getPref("initialSyncDone")) {
+      const confirmed = await showConfirmDialog();
+      if (confirmed) {
+        await HelperFactory.performInitialSync();
+        setPref("syncPreference", newValue);
+      } else {
+        // Reset to previous value if user cancels
+        syncPreferenceRadiogroup.value = currentPreference;
+      }
+    } else {
+      setPref("syncPreference", newValue);
+    }
+
+    UIFactory.registerRightClickMenuItems();
+  });
+}
+
+async function showConfirmDialog(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const dialogHelper = new DialogHelper(1, 1);
+
+    dialogHelper.addCell(0, 0, {
+      tag: "description",
+      properties: { innerHTML: getString("pref-sync-auto-confirm") }
+    });
+
+    dialogHelper.addButton(getString("general-no"), "no", {
+      noClose: false,
+      callback: () => resolve(false)
+    });
+
+    dialogHelper.addButton(getString("general-yes"), "yes", {
+      noClose: false,
+      callback: () => resolve(true)
+    });
+
+    dialogHelper.setDialogData({
+      unloadCallback: () => resolve(false) // Resolve false if dialog is closed without clicking a button
+    });
+
+    dialogHelper.open(getString("pref-sync-auto-confirm-title"), {
+      width: 400,
+      height: 110,
+      centerscreen: true,
+      resizable: false
     });
   });
-
 }
 
 

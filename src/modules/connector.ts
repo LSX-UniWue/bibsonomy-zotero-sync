@@ -15,10 +15,11 @@
 
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
-import { syncItem, deleteItemOnline, syncAllItems } from "../modules/synchronizationLogic";
+import { syncItem, deleteItemOnline, syncAllItems, performInitialSync, performSyncWithErrors } from "../modules/synchronizationLogic";
 import { getPref, setPref, getAuthWithDefaultGroup } from "../utils/prefs";
 import { UnauthorizedError, DuplicateItemError } from '../types/errors';
 import { itemAddedListener, itemModifiedListener, itemDeletedListener } from "../modules/listeners"
+import { DialogHelper } from "zotero-plugin-toolkit/dist/helpers/dialog";
 
 /**
  * Decorator to log method calls and errors in the BibSonomy Connector.
@@ -277,5 +278,190 @@ export class HelperFactory {
         } else {
             ztoolkit.getGlobal("alert")(getString("alert-unexpected-error", { args: { message: "Unknown error" } }));
         }
+    }
+
+    static async performInitialSync() {
+        // eslint-disable-next-line prefer-const
+        let dialog: any;
+        let cancelSync = false;
+        const startTime = Date.now();
+        const dialogData: { [key: string | number]: any } = {
+            errors: [] as Array<{ item: any; error: Error }>,
+            syncedCount: 0,
+            totalCount: 100,
+            progress: 0,
+            message: "",
+            errorLog: "",
+            timeRemaining: "",
+            loadCallback: async () => {
+                ztoolkit.log("Load callback started");
+                try {
+                    const errors = await performSyncWithErrors(
+                        (progress, message) => {
+                            if (cancelSync) return;
+                            dialogData.progress = progress;
+                            dialogData.message = message;
+                            dialogData.syncedCount = Math.floor(progress * dialogData.totalCount);
+                            updateProgress();
+                        },
+                        (error) => {
+                            if (cancelSync) return;
+                            dialogData.errors.push(error);
+                            updateErrorLog(error);
+                        }
+                    );
+                    if (!cancelSync) {
+                        const successfulSyncs = dialogData.totalCount - errors.length;
+                        updateCompletionMessage(successfulSyncs, errors.length);
+                    }
+                } catch (error: any) {
+                    if (!cancelSync) {
+                        ztoolkit.getGlobal("alert")(`Initial sync failed: ${error.message}`);
+                    }
+                } finally {
+                    const closeButton = dialog.window.document.getElementById("close-button");
+                    const cancelButton = dialog.window.document.getElementById("cancel-button");
+                    if (closeButton && cancelButton) {
+                        (closeButton as any).disabled = false;
+                        (cancelButton as any).disabled = true;
+                    }
+                }
+                ztoolkit.log("Load callback finished");
+            },
+        };
+
+        ztoolkit.log("Creating dialog");
+        dialog = new ztoolkit.Dialog(8, 1)
+            .addCell(0, 0, {
+                tag: "description",
+                properties: {
+                    style: "width: 100%; margin-bottom: 15px; font-size: 14px; white-space: normal; word-wrap: break-word;"
+                },
+                children: [{
+                    tag: "description",
+                    properties: {
+                        value: getString("initial-sync-description"),
+                        style: "white-space: normal; word-wrap: break-word;"
+                    }
+                }]
+            })
+            .addCell(1, 0, {
+                tag: "hbox",
+                properties: {
+                    id: "progress-bar-container",
+                    style: "width: 100%; height: 20px; border: 1px solid #ccc; background-color: #f0f0f0; margin-bottom: 10px; border-radius: 10px; overflow: hidden;"
+                },
+                children: [{
+                    tag: "hbox",
+                    properties: {
+                        id: "progress-bar",
+                        style: "width: 0%; height: 100%; background-color: #4CAF50; transition: width 0.3s ease-in-out;"
+                    }
+                }]
+            })
+            .addCell(2, 0, {
+                tag: "description",
+                attributes: { "data-bind": "message" },
+                properties: { id: "progress-description", style: "margin-bottom: 5px; font-size: 13px;" }
+            })
+            .addCell(3, 0, {
+                tag: "description",
+                properties: { id: "time-remaining", style: "margin-bottom: 15px; font-size: 12px; color: #666;" }
+            })
+            .addCell(4, 0, {
+                tag: "description",
+                properties: { value: getString("initial-sync-error-log"), style: "font-weight: bold; margin-bottom: 5px; font-size: 13px;" }
+            })
+            .addCell(5, 0, {
+                tag: "vbox",
+                properties: {
+                    id: "error-log-container",
+                    style: "width: 100%; height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 5px; margin-bottom: 15px; font-family: monospace; font-size: 12px; background-color: #fff;"
+                }
+            })
+            .addCell(6, 0, {
+                tag: "description",
+                properties: { id: "completion-message", style: "font-weight: bold; margin-top: 10px; font-size: 14px; text-align: center;" }
+            })
+            .addButton(getString("initial-sync-cancel"), "cancel-button", {
+                noClose: true,
+                callback: () => {
+                    cancelSync = true;
+                    updateCompletionMessage(dialogData.syncedCount, dialogData.errors.length, true);
+                    (dialog.window.document.getElementById("cancel-button") as any).disabled = true;
+                    (dialog.window.document.getElementById("close-button") as any).disabled = false;
+                }
+            })
+            .addButton(getString("initial-sync-close"), "close-button", {
+                disabled: true
+            })
+            .setDialogData(dialogData);
+
+        ztoolkit.log("Opening dialog");
+        dialog.open(getString("initial-sync-title"), {
+            width: 450,
+            height: 450,
+            centerscreen: true,
+        });
+
+        function updateProgress() {
+            const progressBar = dialog.window.document.getElementById("progress-bar");
+            const progressDescription = dialog.window.document.getElementById("progress-description");
+            const timeRemaining = dialog.window.document.getElementById("time-remaining");
+            if (progressBar && progressDescription && timeRemaining) {
+                progressBar.style.width = `${dialogData.progress * 100}%`;
+                progressDescription.textContent = getString("initial-sync-progress", {
+                    args: { synced: dialogData.syncedCount, total: dialogData.totalCount }
+                });
+
+                const elapsedTime = (Date.now() - startTime) / 1000;
+                const estimatedTotalTime = elapsedTime / dialogData.progress;
+                const remainingTime = Math.max(0, estimatedTotalTime - elapsedTime);
+                timeRemaining.textContent = getString("initial-sync-time-remaining", {
+                    args: { time: Math.round(remainingTime) }
+                });
+            }
+        }
+
+        function updateErrorLog(error: { item: any; error: Error }) {
+            const errorLogContainer = dialog.window.document.getElementById("error-log-container");
+            if (errorLogContainer) {
+                const errorElement = dialog.window.document.createElement("description");
+                errorElement.textContent = `Item ${error.item.id} (${error.item.title}): ${error.error.message}`;
+                errorElement.style.color = "red";
+                errorElement.style.opacity = "0";
+                errorElement.style.transition = "opacity 0.3s ease-in-out";
+                errorLogContainer.appendChild(errorElement);
+                errorLogContainer.scrollTop = errorLogContainer.scrollHeight;
+                setTimeout(() => {
+                    errorElement.style.opacity = "1";
+                }, 10);
+            }
+        }
+
+        function updateCompletionMessage(successfulSyncs: number, errorCount: number, cancelled: boolean = false) {
+            const completionMessage = dialog.window.document.getElementById("completion-message");
+            if (completionMessage) {
+                if (cancelled) {
+                    completionMessage.textContent = getString("initial-sync-cancelled", {
+                        args: { synced: successfulSyncs, failed: errorCount, total: dialogData.totalCount }
+                    });
+                } else {
+                    completionMessage.textContent = getString("initial-sync-complete", {
+                        args: { successful: successfulSyncs, failed: errorCount, total: dialogData.totalCount }
+                    });
+                }
+            }
+
+            // Ensure error log remains visible
+            const errorLogContainer = dialog.window.document.getElementById("error-log-container");
+            if (errorLogContainer) {
+                errorLogContainer.style.display = 'block';
+            }
+        }
+
+        ztoolkit.log("Waiting for dialog to close");
+        await dialogData.unloadLock.promise;
+        ztoolkit.log("Dialog closed");
     }
 }

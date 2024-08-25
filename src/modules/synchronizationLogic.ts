@@ -5,10 +5,11 @@
  */
 
 import { getEntry, postEntry, updateBibsonomyPost, deleteEntry } from './bibsonomyAPI';
-import { getPref, getAuth, getAuthWithDefaultGroup } from '../utils/prefs';
+import { getPref, getAuth, getAuthWithDefaultGroup, setPref } from '../utils/prefs';
 import { config } from "../../package.json";
+import { getString } from '../utils/locale';
 
-export { syncItem, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem, syncAllItems, addAttachmentsSyncdateToItem }
+export { syncItem, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem, syncAllItems, addAttachmentsSyncdateToItem, performInitialSync, performSyncWithErrors }
 
 /**
  * Synchronizes all items in the user's library with BibSonomy, that are already online.
@@ -324,4 +325,69 @@ function getBibsonomyMetadataFromItem(item: Zotero.Item): { interhash: string, i
         }
     }
     return { interhash: "", intrahash: "", syncdate: "", attachmentsSyncdate: "" };
+}
+
+async function performSyncWithErrors(
+    progressCallback: (progress: number, message: string) => void,
+    errorCallback: (error: { item: any; error: Error }) => void
+): Promise<Array<{ item: any; error: Error }>> {
+    const totalItems = 100; // Simulate 100 items to sync
+    const errors: Array<{ item: any; error: Error }> = [];
+
+    ztoolkit.log("Starting sync process");
+    for (let i = 0; i < totalItems; i++) {
+        try {
+            // Simulate syncing process
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Simulate errors (10% chance)
+            if (Math.random() < 0.2) {
+                throw new Error(`Failed to sync: ${['Network error', 'API timeout', 'Invalid data', 'A super long error message that should be truncated'][Math.floor(Math.random() * 4)]}`);
+            }
+
+            const progress = (i + 1) / totalItems;
+            progressCallback(progress, getString("initial-sync-progress", { args: { synced: i + 1, total: totalItems } }));
+        } catch (error) {
+            const errorInfo = { item: { id: i, title: `Test Item ${i}` }, error: error as Error };
+            errors.push(errorInfo);
+            errorCallback(errorInfo);
+        }
+    }
+
+    ztoolkit.log("Sync process completed");
+    return errors;
+}
+
+async function performInitialSync(
+    progressCallback: (progress: number, message: string) => void,
+    errorCallback: (error: { item: Zotero.Item; error: Error }) => void
+): Promise<Array<{ item: Zotero.Item; error: Error }>> {
+    const libraryID = Zotero.Libraries.userLibraryID;
+    const items = await Zotero.Items.getAll(libraryID, true, false);
+    const regularItems = items.filter(item => item.isRegularItem());
+
+    let syncedCount = 0;
+    const totalCount = regularItems.length;
+    const errors: Array<{ item: Zotero.Item; error: Error }> = [];
+
+    // progressCallback(0, getString("initial-sync-progress", { args: { synced: syncedCount, total: totalCount } }));
+
+    for (const item of regularItems) {
+        try {
+            const { user, apiToken, defaultGroup } = getAuthWithDefaultGroup();
+            // await syncItem(item, user, apiToken, defaultGroup, true);
+            // For debugging: Wait 1 second
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            ztoolkit.log(`Syncing item ${item.getField('title')}`);
+            syncedCount++;
+            progressCallback(syncedCount / totalCount, getString("initial-sync-progress", { args: { synced: syncedCount, total: totalCount } }));
+        } catch (error) {
+            const errorInfo = { item, error: error as Error };
+            errors.push(errorInfo);
+            errorCallback(errorInfo);
+        }
+    }
+
+    setPref("initialSyncDone", true);
+    return errors;
 }

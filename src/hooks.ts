@@ -1,4 +1,5 @@
 import { BaseFactory, HelperFactory, UIFactory } from "./modules/connector"
+import { getPref } from "./utils/prefs";
 import { config } from "../package.json";
 import { getString, initLocale } from "./utils/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
@@ -22,6 +23,16 @@ async function onStartup() {
 
   BaseFactory.registerNotifier();
   BaseFactory.registerPrefs();
+
+  // Check if initial sync is needed
+  const syncPreference = getPref("syncPreference");
+  const initialSyncDone = getPref("initialSyncDone");
+  if (syncPreference === "auto" && !initialSyncDone) {
+    await HelperFactory.performInitialSync();
+  } else if (syncPreference === "auto") {
+    //TODO: Change this back!!!!
+    // HelperFactory.syncAllEntries();
+  }
 
   await onMainWindowLoad(window);
 }
