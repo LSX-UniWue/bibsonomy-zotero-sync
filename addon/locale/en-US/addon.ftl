@@ -19,6 +19,12 @@ progress-update-entry-text = Updating publication { $title } on BibSonomy...
 progress-delete-entry-text = Deleting publication { $title } from BibSonomy...
 progress-upload-files-text = Uploading attachments for { $title }
 progress-unauthorized-error = User is not authenticated, skipping sync
+progress-error-help-link = Need help?
+# TODO: Write actually helpful messages
+progress-error-help-message-unauthorized = This error might be due to network connectivity issues. Please check your internet connection and try again.
+progress-error-help-message-post-not-found = This error might be due to network connectivity issues. Please check your internet connection and try again.
+progress-error-help-message-invalid-format = This error might be due to network connectivity issues. Please check your internet connection and try again.
+progress-error-help-message-unexpected = An unexpected error occurred. Please try again or file an issue at https://github.com/zotero-bibsonomy/zotero-bibsonomy/issues.
 
 # Delete confirmation dialog
 dialog-delete-confirm-title = Confirm Online Deletion

@@ -11,6 +11,7 @@
     "releasePage": "https://github.com/LSX-UniWue/bibsonomy-zotero-sync/releases",
     "updateJSON": "https://raw.githubusercontent.com/LSX-UniWue/bibsonomy-zotero-sync/main/update.json",
     "postTag": "zotero_synced",
+    "noSyncTag": "no_sync",
     "itemTag": "bibsonomy_synced",
     "bibsonomyBaseURL": "https://www.bibsonomy.org",
     "bibliciousBaseURL": "https://www.biblicious.org"

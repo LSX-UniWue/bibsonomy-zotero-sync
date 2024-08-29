@@ -328,27 +328,35 @@ function getBibsonomyMetadataFromItem(item: Zotero.Item): { interhash: string, i
 }
 
 async function performSyncWithErrors(
+    totalItemsCallback: (totalItems: number) => void,
     progressCallback: (progress: number, message: string) => void,
     errorCallback: (error: { item: any; error: Error }) => void
 ): Promise<Array<{ item: any; error: Error }>> {
-    const totalItems = 100; // Simulate 100 items to sync
-    const errors: Array<{ item: any; error: Error }> = [];
+    const libraryID = Zotero.Libraries.userLibraryID;
+    const items = await Zotero.Items.getAll(libraryID, true, false);
+    const regularItems = items.filter(item => item.isRegularItem());
+
+    const totalItems = regularItems.length;
+    const errors: Array<{ item: Zotero.Item; error: Error }> = [];
+
+    totalItemsCallback(totalItems);
 
     ztoolkit.log("Starting sync process");
     for (let i = 0; i < totalItems; i++) {
+        const item = regularItems[i];
         try {
             // Simulate syncing process
             await new Promise(resolve => setTimeout(resolve, 100));
 
             // Simulate errors (10% chance)
-            if (Math.random() < 0.2) {
+            if (Math.random() < 0.1) {
                 throw new Error(`Failed to sync: ${['Network error', 'API timeout', 'Invalid data', 'A super long error message that should be truncated'][Math.floor(Math.random() * 4)]}`);
             }
 
             const progress = (i + 1) / totalItems;
             progressCallback(progress, getString("initial-sync-progress", { args: { synced: i + 1, total: totalItems } }));
         } catch (error) {
-            const errorInfo = { item: { id: i, title: `Test Item ${i}` }, error: error as Error };
+            const errorInfo = { item: item, error: error as Error };
             errors.push(errorInfo);
             errorCallback(errorInfo);
         }

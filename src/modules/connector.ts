@@ -17,7 +17,7 @@ import { config } from "../../package.json";
 import { getString } from "../utils/locale";
 import { syncItem, deleteItemOnline, syncAllItems, performInitialSync, performSyncWithErrors } from "../modules/synchronizationLogic";
 import { getPref, setPref, getAuthWithDefaultGroup } from "../utils/prefs";
-import { UnauthorizedError, DuplicateItemError } from '../types/errors';
+import { UnauthorizedError, DuplicateItemError, PostNotFoundError, InvalidFormatError } from '../types/errors';
 import { itemAddedListener, itemModifiedListener, itemDeletedListener } from "../modules/listeners"
 import { DialogHelper } from "zotero-plugin-toolkit/dist/helpers/dialog";
 
@@ -286,9 +286,9 @@ export class HelperFactory {
         let cancelSync = false;
         const startTime = Date.now();
         const dialogData: { [key: string | number]: any } = {
-            errors: [] as Array<{ item: any; error: Error }>,
+            errors: [] as Array<{ item: Zotero.Item; error: Error }>,
             syncedCount: 0,
-            totalCount: 100,
+            totalCount: 1, //To not start with 100% progress
             progress: 0,
             message: "",
             errorLog: "",
@@ -297,6 +297,9 @@ export class HelperFactory {
                 ztoolkit.log("Load callback started");
                 try {
                     const errors = await performSyncWithErrors(
+                        (totalItems) => {
+                            dialogData.totalCount = totalItems;
+                        },
                         (progress, message) => {
                             if (cancelSync) return;
                             dialogData.progress = progress;
@@ -399,9 +402,10 @@ export class HelperFactory {
 
         ztoolkit.log("Opening dialog");
         dialog.open(getString("initial-sync-title"), {
-            width: 450,
+            width: 550,
             height: 450,
             centerscreen: true,
+            resizable: false, //TODO: Would be nice to have a resizable dialog, but need to bind this to the height of the error log
         });
 
         function updateProgress() {
@@ -423,19 +427,75 @@ export class HelperFactory {
             }
         }
 
-        function updateErrorLog(error: { item: any; error: Error }) {
+        function updateErrorLog(error: { item: Zotero.Item; error: Error }) {
             const errorLogContainer = dialog.window.document.getElementById("error-log-container");
             if (errorLogContainer) {
-                const errorElement = dialog.window.document.createElement("description");
-                errorElement.textContent = `Item ${error.item.id} (${error.item.title}): ${error.error.message}`;
-                errorElement.style.color = "red";
+                const errorElement = dialog.window.document.createElement("div");
+
+                const itemName = dialog.window.document.createElement("span");
+                itemName.textContent = `Item "${error.item.getField("title")}": `;
+                itemName.style.fontWeight = "bold";
+                itemName.style.color = "#333";
+
+                const errorMessage = dialog.window.document.createElement("span");
+                errorMessage.textContent = error.error.message;
+                errorMessage.style.color = "#d32f2f";
+
+                const helpLink = dialog.window.document.createElement("a");
+                helpLink.textContent = getString("progress-error-help-link");
+                helpLink.href = "#";
+                helpLink.style.color = "#1565c0";
+                helpLink.onclick = (e: any) => {
+                    e.preventDefault();
+                    showErrorHelp(error.error);
+                };
+
+                const contentWrapper = dialog.window.document.createElement("div");
+                contentWrapper.style.display = "flex";
+                contentWrapper.style.justifyContent = "space-between";
+                contentWrapper.style.alignItems = "flex-start";
+
+                const textContent = dialog.window.document.createElement("div");
+                textContent.style.flex = "1";
+                textContent.appendChild(itemName);
+                textContent.appendChild(errorMessage);
+
+                contentWrapper.appendChild(textContent);
+                contentWrapper.appendChild(helpLink);
+
+                errorElement.appendChild(contentWrapper);
+
                 errorElement.style.opacity = "0";
                 errorElement.style.transition = "opacity 0.3s ease-in-out";
+                errorElement.style.marginBottom = "5px";
+                errorElement.style.padding = "5px";
+                errorElement.style.backgroundColor = "#ffebee";
+                errorElement.style.borderRadius = "3px";
+
                 errorLogContainer.appendChild(errorElement);
                 errorLogContainer.scrollTop = errorLogContainer.scrollHeight;
+
                 setTimeout(() => {
                     errorElement.style.opacity = "1";
                 }, 10);
+            }
+        }
+
+        function showErrorHelp(error: Error) {
+            const helpMessage = getErrorHelpMessage(error);
+            ztoolkit.getGlobal("alert")(helpMessage);
+        }
+
+        function getErrorHelpMessage(error: Error): string {
+            // Add more specific error types and messages as needed
+            if (error instanceof UnauthorizedError) {
+                return getString("progress-error-help-message-unauthorized");
+            } else if (error instanceof PostNotFoundError) {
+                return getString("progress-error-help-message-post-not-found");
+            } else if (error instanceof InvalidFormatError) {
+                return getString("progress-error-help-message-invalid-format");
+            } else {
+                return getString("progress-error-help-message-unexpected");
             }
         }
 
