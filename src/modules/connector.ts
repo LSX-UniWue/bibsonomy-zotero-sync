@@ -16,10 +16,11 @@
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
 import { syncItem, deleteItemOnline, syncAllItems, performInitialSync, performSyncWithErrors } from "../modules/synchronizationLogic";
-import { getPref, setPref, getAuthWithDefaultGroup } from "../utils/prefs";
-import { UnauthorizedError, DuplicateItemError, PostNotFoundError, InvalidFormatError } from '../types/errors';
+import { getPref, setPref, getAuth } from "../utils/prefs";
+import { UnauthorizedError, DuplicateItemError, PostNotFoundError, InvalidFormatError, InvalidBibTexError } from '../types/errors';
 import { itemAddedListener, itemModifiedListener, itemDeletedListener } from "../modules/listeners"
 import { DialogHelper } from "zotero-plugin-toolkit/dist/helpers/dialog";
+import { acquireLock, releaseLock } from '../utils/locks';
 
 /**
  * Decorator to log method calls and errors in the BibSonomy Connector.
@@ -69,6 +70,7 @@ export class BaseFactory {
                 // Dispatch all events related to syncing items
                 // The handling of the syncmode is done within the methods
                 if (type === "item") {
+                    // TODO: Lock handling! 
                     switch (event) {
                         case "add":
                             ztoolkit.log(`Item added: ${ids}`);
@@ -195,6 +197,7 @@ export class UIFactory {
 export class HelperFactory {
 
     static async syncAllEntries() {
+        //TODO: Replace with performFullLibrarySync
         await syncAllItems();
     }
 
@@ -208,6 +211,11 @@ export class HelperFactory {
 
     static async syncEntry(item: Zotero.Item | null = null, force_update: boolean = false, notifyDuplicate: boolean = true, isUpdate: boolean = false) {
         item = item || await this.getSelectedItem();
+        const itemId = item.id.toString();
+        if (!acquireLock(itemId)) {
+            ztoolkit.log(`Item ${itemId} is already being processed, skipping sync`);
+            return;
+        }
 
         const progressWindow = new ztoolkit.ProgressWindow(config.addonName);
         if (isUpdate) {
@@ -224,12 +232,14 @@ export class HelperFactory {
         progressWindow.show(1000);
 
         try {
-            const { user, apiToken, defaultGroup } = getAuthWithDefaultGroup();
-            const post = await syncItem(item, user, apiToken, defaultGroup, force_update);
+            const { user } = getAuth();
+            const post = await syncItem(item, force_update);
             return `${Zotero[config.addonInstance].data.baseURL}/bibtex/${post.bibtex.interhash}/${user}`;
         } catch (error: any) {
             this.handleError(error, "sync");
             return "";
+        } finally {
+            releaseLock(itemId);
         }
     }
 
@@ -487,13 +497,15 @@ export class HelperFactory {
         }
 
         function getErrorHelpMessage(error: Error): string {
-            // Add more specific error types and messages as needed
+            // FIXME: Add the full error handling here. 
             if (error instanceof UnauthorizedError) {
                 return getString("progress-error-help-message-unauthorized");
             } else if (error instanceof PostNotFoundError) {
                 return getString("progress-error-help-message-post-not-found");
             } else if (error instanceof InvalidFormatError) {
                 return getString("progress-error-help-message-invalid-format");
+            } else if (error instanceof InvalidBibTexError) {
+                return getString("progress-error-help-message-invalid-bibtex");
             } else {
                 return getString("progress-error-help-message-unexpected");
             }

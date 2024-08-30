@@ -25,6 +25,7 @@ progress-error-help-message-unauthorized = This error might be due to network co
 progress-error-help-message-post-not-found = This error might be due to network connectivity issues. Please check your internet connection and try again.
 progress-error-help-message-invalid-format = This error might be due to network connectivity issues. Please check your internet connection and try again.
 progress-error-help-message-unexpected = An unexpected error occurred. Please try again or file an issue at https://github.com/zotero-bibsonomy/zotero-bibsonomy/issues.
+progress-error-help-message-invalid-bibtex = The BibTeX you are trying to sync is invalid. Please check the BibTeX and try again.
 
 # Delete confirmation dialog
 dialog-delete-confirm-title = Confirm Online Deletion

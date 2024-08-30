@@ -8,6 +8,7 @@ import { config } from "../../package.json";
 import { checkIfItemIsOnline } from "../modules/synchronizationLogic";
 import { HelperFactory } from "./connector";
 import { getString } from "../utils/locale";
+import { acquireLock, releaseLock } from '../utils/locks';
 
 export { itemAddedListener, itemModifiedListener, itemDeletedListener };
 
@@ -39,26 +40,34 @@ async function itemAddedListener(ids: number[] | string[]) {
  * @param ids - The IDs of the items to update
  */
 async function itemModifiedListener(ids: number[] | string[]) {
-    //Check if the user is authenticated and has enabled the automatic or semi-automatic sync
     if (!checkAuthAndPrefs("semi-auto")) return;
 
     const { user, apiToken } = getAuth();
     for (const id of ids) {
-        ztoolkit.log(`ID of the modified item: ${id}`);
-        const modifiedItem = await Zotero.Items.getAsync(id);
+        const itemId = id.toString();
+        if (!acquireLock(itemId)) {
+            ztoolkit.log(`Item ${itemId} is already being processed, skipping`);
+            continue;
+        }
 
-        if (!modifiedItem.isRegularItem()) {
-            await handleAttachment(modifiedItem, itemModifiedListener);
-        } else if (checkIfItemIsOnline(modifiedItem, user, apiToken)) {
-            ztoolkit.log("Item is online, syncing");
-            try {
-                await HelperFactory.syncEntry(modifiedItem, true, false, true);
-            } catch (error) {
-                //TODO: Handle the error
-                ztoolkit.log("Error while syncing item: " + error);
+        try {
+            ztoolkit.log(`ID of the modified item: ${itemId}`);
+            const modifiedItem = await Zotero.Items.getAsync(id);
+
+            if (!modifiedItem.isRegularItem()) {
+                await handleAttachment(modifiedItem, itemModifiedListener);
+            } else if (await checkIfItemIsOnline(modifiedItem)) {
+                ztoolkit.log("Item is online, syncing");
+                try {
+                    await HelperFactory.syncEntry(modifiedItem, true, false, true);
+                } catch (error) {
+                    ztoolkit.log("Error while syncing item: " + error);
+                }
+            } else {
+                ztoolkit.log("Item is not online, skipping sync");
             }
-        } else {
-            ztoolkit.log("Item is not online, skipping sync");
+        } finally {
+            releaseLock(itemId);
         }
     }
 }
@@ -102,7 +111,7 @@ async function itemDeletedListener(ids: number[] | string[]) {
  */
 async function shouldDeleteOnline(item: any, user: string, apiToken: string): Promise<boolean> {
     // If the item is not online, we don't need to bother anyways
-    if (!checkIfItemIsOnline(item, user, apiToken)) return false;
+    if (!checkIfItemIsOnline(item)) return false;
     // If the sync preference is automatic, we can delete the item online
     if (getPref("syncPreference") === "auto") return true;
     // If the sync preference is manual or semi-automatic, we need to ask the user if they want to delete the item online

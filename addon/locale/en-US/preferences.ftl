@@ -43,3 +43,10 @@ initial-sync-close = Close
 
 general-yes = Yes
 general-no = No
+
+pref-debug-title = Debugging
+pref-clean-library = Clean Library Metadata
+pref-clean-library-confirm-title = Confirm Library Cleaning
+pref-clean-library-confirm = This action will remove all BibSonomy sync metadata from your library. This cannot be undone. Are you sure you want to proceed?
+pref-clean-library-complete-title = Library Cleaning Complete
+pref-clean-library-complete = All BibSonomy sync metadata has been removed from your library.

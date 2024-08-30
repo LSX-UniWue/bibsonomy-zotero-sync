@@ -25,3 +25,17 @@ export class InvalidFormatError extends Error {
         this.name = 'InvalidFormatError';
     }
 }
+
+export class ConflictResolutionError extends Error {
+    constructor(message?: string) {
+        super(message || 'Conflict resolution needed');
+        this.name = 'ConflictResolutionError';
+    }
+}
+
+export class InvalidBibTexError extends Error {
+    constructor(message?: string) {
+        super(message || 'Invalid BibTex');
+        this.name = 'InvalidBibTexError';
+    }
+}

@@ -8,6 +8,10 @@ import { getPref, setPref, getAuth } from "../utils/prefs";
 import { UIFactory } from "./connector"
 import { HelperFactory } from "./connector";
 import { DialogHelper } from "zotero-plugin-toolkit/dist/helpers/dialog";
+import { cleanLibraryMetadata } from "./synchronizationLogic";
+
+// Add this import at the top of the file
+declare const __env__: "production" | "development";
 
 export async function registerPrefsScripts(_window: Window) {
   // Initialize or update preferences UI
@@ -22,6 +26,8 @@ export async function registerPrefsScripts(_window: Window) {
 
   await updatePrefsUI();
   bindPrefEvents();
+
+  toggleDebugSection();
 }
 
 /**
@@ -128,7 +134,6 @@ function updateAuthUi() {
   warningElement?.setAttribute("hidden", authenticated!.toString());
 }
 
-
 function bindPrefEvents() {
   addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-username`)
     ?.addEventListener("focusout", async (e) => {
@@ -157,17 +162,20 @@ function bindPrefEvents() {
   const currentPreference = getPref("syncPreference");
   syncPreferenceRadiogroup.value = currentPreference;
 
-  syncPreferenceRadiogroup.addEventListener("command", async (e) => {
+  syncPreferenceRadiogroup.addEventListener("command", async (e: any) => {
     e.preventDefault(); // Prevent default behavior
     const newValue = syncPreferenceRadiogroup.value;
 
     ztoolkit.log(`Sync preference changed to ${newValue}`);
 
     if (newValue === "auto" && !getPref("initialSyncDone")) {
-      const confirmed = await showConfirmDialog();
+      const confirmed = await showConfirmDialog(
+        getString("pref-sync-auto-confirm-title"),
+        getString("pref-sync-auto-confirm")
+      );
       if (confirmed) {
-        await HelperFactory.performInitialSync();
         setPref("syncPreference", newValue);
+        await HelperFactory.performInitialSync();
       } else {
         // Reset to previous value if user cancels
         syncPreferenceRadiogroup.value = currentPreference;
@@ -178,15 +186,40 @@ function bindPrefEvents() {
 
     UIFactory.registerRightClickMenuItems();
   });
+
+  addon.data.prefs!.window.document.querySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-clean-library`)
+    ?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const confirmed = await showConfirmDialog(
+        getString("pref-clean-library-confirm-title"),
+        getString("pref-clean-library-confirm")
+      );
+      if (confirmed) {
+        await cleanLibraryMetadata();
+        new ztoolkit.ProgressWindow(getString("pref-clean-library-complete-title"))
+          .createLine({
+            text: getString("pref-clean-library-complete"),
+            type: "success",
+          })
+          .show();
+      }
+    });
 }
 
-async function showConfirmDialog(): Promise<boolean> {
+function toggleDebugSection() {
+  const debugGroup = getElementBySelector(`#zotero-prefpane-${config.addonRef}-container #zotero-prefpane-${config.addonRef}-debug-group`);
+  if (debugGroup) {
+    debugGroup.hidden = __env__ === "production";
+  }
+}
+
+async function showConfirmDialog(title: string, message: string): Promise<boolean> {
   return new Promise((resolve) => {
     const dialogHelper = new DialogHelper(1, 1);
 
     dialogHelper.addCell(0, 0, {
       tag: "description",
-      properties: { innerHTML: getString("pref-sync-auto-confirm") }
+      properties: { innerHTML: message }
     });
 
     dialogHelper.addButton(getString("general-no"), "no", {
@@ -203,7 +236,7 @@ async function showConfirmDialog(): Promise<boolean> {
       unloadCallback: () => resolve(false) // Resolve false if dialog is closed without clicking a button
     });
 
-    dialogHelper.open(getString("pref-sync-auto-confirm-title"), {
+    dialogHelper.open(title, {
       width: 400,
       height: 110,
       centerscreen: true,
@@ -211,7 +244,6 @@ async function showConfirmDialog(): Promise<boolean> {
     });
   });
 }
-
 
 // Some helper functions to handle the preferences
 const getElementBySelector = (selector: string): HTMLElement | null =>

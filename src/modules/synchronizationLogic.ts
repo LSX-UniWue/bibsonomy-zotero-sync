@@ -8,13 +8,15 @@ import { getEntry, postEntry, updateBibsonomyPost, deleteEntry } from './bibsono
 import { getPref, getAuth, getAuthWithDefaultGroup, setPref } from '../utils/prefs';
 import { config } from "../../package.json";
 import { getString } from '../utils/locale';
+import { ConflictResolutionError } from '../types/errors';
+import { acquireLock, releaseLock } from '../utils/locks';
 
-export { syncItem, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem, syncAllItems, addAttachmentsSyncdateToItem, performInitialSync, performSyncWithErrors }
+export { syncItem, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem, syncAllItems, addAttachmentsSyncdateToItem, performInitialSync, performFullLibrarySync as performSyncWithErrors, cleanLibraryMetadata }
 
 /**
  * Synchronizes all items in the user's library with BibSonomy, that are already online.
  * TODO: Whilst working, this needs optimization and more advanced error handling!
- * 
+ * @deprecated
  * @returns {Promise<void>} A promise that resolves when the synchronization is complete.
  */
 async function syncAllItems() {
@@ -33,8 +35,7 @@ async function syncAllItems() {
                 continue;
             }
         }
-        const { user, apiToken, defaultGroup } = getAuthWithDefaultGroup();
-        await syncItem(item, user, apiToken, defaultGroup);
+        await syncItem(item);
     }
 }
 
@@ -54,7 +55,7 @@ async function deleteItemOnline(item: Zotero.Item): Promise<void> {
     }
 
     try {
-        if (await checkIfItemIsOnline(item, user, apiToken)) {
+        if (await checkIfItemIsOnline(item)) {
             await deleteEntry(user, apiToken, hashes.intrahash);
             ztoolkit.log(`Deleted item ${item.getField('title')} from BibSonomy`);
         } else {
@@ -76,23 +77,24 @@ async function deleteItemOnline(item: Zotero.Item): Promise<void> {
  * @param group The group within which the item should be posted or updated.
  * @returns A promise that resolves to the BibsonomyPost object representing the synchronized item.
  */
-async function syncItem(item: Zotero.Item, username: string, apikey: string, group: string, force_update: boolean = false): Promise<BibsonomyPost> {
-    const isOnline = checkIfItemIsOnline(item, username, apikey);
+async function syncItem(item: Zotero.Item, force_update: boolean = false): Promise<BibsonomyPost> {
+    const { user, apiToken, defaultGroup } = getAuthWithDefaultGroup();
+    const isOnline = await checkIfItemIsOnline(item);
     let post = null;
     if (!isOnline) {
         ztoolkit.log(`Item ${item.getField('title')} is not online, posting.`);
-        post = await postEntry(item, username, apikey, group);
+        post = await postEntry(item);
     } else {
         ztoolkit.log(`Item ${item.getField('title')} is already online, checking updates.`);
         const hashes = getBibsonomyMetadataFromItem(item);
-        post = await getEntry(username, apikey, hashes.intrahash);
-        const updatedOnline = await wasUpdatedOnline(item, username, apikey);
+        post = await getEntry(hashes.intrahash);
+        const updatedOnline = await wasUpdatedOnline(item);
         const updatedOffline = await wasUpdatedOffline(item);
 
         if (updatedOnline && updatedOffline) {
             // TODO: Handle conflict resolution (this requires implementation)
             ztoolkit.log(`Conflict detected for ${item.getField('title')}. Merging changes.`);
-            await handleConflictResolution(item, username, apikey, group);
+            await handleConflictResolution(item, user, apiToken, defaultGroup);
         } else if (updatedOnline) {
             // TODO: Update item offline (requires implementation)
             ztoolkit.log(`Updating ${item.getField('title')} offline.`);
@@ -100,7 +102,7 @@ async function syncItem(item: Zotero.Item, username: string, apikey: string, gro
             // Update item online
             ztoolkit.log(`Updating ${item.getField('title')} online.`);
             const updatedAttachments = await getChangedAttachments(item);
-            post = await updateBibsonomyPost(item, updatedAttachments, hashes.intrahash, username, apikey, group);
+            post = await updateBibsonomyPost(item, updatedAttachments, hashes.intrahash);
         } else {
             // No updates needed
             ztoolkit.log(`No updates for ${item.getField('title')}, skipping.`);
@@ -118,30 +120,31 @@ async function syncItem(item: Zotero.Item, username: string, apikey: string, gro
  * @param item The item with conflicting updates.
  * @param username The username for authentication.
  * @param apikey The API key for authentication.
- * @param group The group within which the item is managed.
+ * @param defaultGroup The group within which the item is managed.
  */
-async function handleConflictResolution(item: Zotero.Item, username: string, apikey: string, group: string): Promise<void> {
+async function handleConflictResolution(item: Zotero.Item, user: string, apiToken: string, defaultGroup: string): Promise<void> {
     // Implement conflict resolution logic here.
     // This could involve user interaction to choose which version to keep,
     // automatic merging of changes, or favoring one source over the other.
-    throw new Error(`${item.getField('title')} has conflicting updates. Conflict resolution is not implemented yet.`);
+    throw new ConflictResolutionError(`${item.getField('title')} has conflicting updates. Conflict resolution is not implemented yet.`);
 }
 
 /**
  * Checks if the given item was updated online on BibSonomy.
  * @param item - The Zotero item to check.
- * @param username - The BibSonomy username.
- * @param apikey - The BibSonomy API key.
+ * @param user - The BibSonomy username.
+ * @param apiToken - The BibSonomy API key.
  * @returns A Promise that resolves to a boolean indicating whether the item was updated online.
  * @throws An error if the item does not have a syncdate.
  */
-async function wasUpdatedOnline(item: Zotero.Item, username: string, apikey: string): Promise<boolean> {
+async function wasUpdatedOnline(item: Zotero.Item): Promise<boolean> {
+    const { user, apiToken } = getAuth();
     //Check if the items syncdate is older than the last update on BibSonomy
     const hashes = getBibsonomyMetadataFromItem(item);
     if (hashes.syncdate === "") {
         throw new Error("Item does not have a syncdate");
     }
-    const entry = await getEntry(username, apikey, hashes.intrahash);
+    const entry = await getEntry(hashes.intrahash);
     const lastSyncDate = new Date(hashes.syncdate);
     const lastUpdate = new Date(entry.changedate!);
     const buffer = 10 * 1000; // 10 seconds buffer
@@ -189,11 +192,9 @@ async function getChangedAttachments(item: Zotero.Item): Promise<Zotero.Item[]> 
 /**
  * Checks if the given item is available online in BibSonomy.
  * @param item - The Zotero item to check.
- * @param username - The BibSonomy username.
- * @param apikey - The BibSonomy API key.
  * @returns Returns `true` if the item is available online, `false` otherwise.
  */
-function checkIfItemIsOnline(item: Zotero.Item, username: string, apikey: string): boolean {
+async function checkIfItemIsOnline(item: Zotero.Item): Promise<boolean> {
     //Check if the item has a Hash in the notes
     const hashes = getBibsonomyMetadataFromItem(item);
     ztoolkit.log(`Checking if item ${item.getField('title')} is online with hashes: ${JSON.stringify(hashes)}`);
@@ -203,9 +204,10 @@ function checkIfItemIsOnline(item: Zotero.Item, username: string, apikey: string
     }
 
     //Check if the item can be found in BibSonomy
+    const { user, apiToken } = getAuth();
     try {
         ztoolkit.log(`Checking if item ${item.getField('title')} is online with hashes: ${JSON.stringify(hashes)}`);
-        const entry = getEntry(username, apikey, hashes.intrahash);
+        const entry = await getEntry(hashes.intrahash);
         return entry !== null;
     } catch (error) {
         return false;
@@ -327,75 +329,134 @@ function getBibsonomyMetadataFromItem(item: Zotero.Item): { interhash: string, i
     return { interhash: "", intrahash: "", syncdate: "", attachmentsSyncdate: "" };
 }
 
-async function performSyncWithErrors(
+/**
+ * Retrieves all items in the user's library that are viable for syncing.
+ * To be viable for syncing, the item needs to:
+ * - be a regular item
+ * - be wanted for syncing (based on syncPreference)
+ * - have no explicit exclude tag (e.g. due to previous failed sync attempts or explicit user decision)
+ * @returns A promise that resolves to an array of Zotero items.
+ */
+async function getItemsToSync(): Promise<Zotero.Item[]> {
+    const libraryID = Zotero.Libraries.userLibraryID;
+    const items = await Zotero.Items.getAll(libraryID, true, false);
+    const regularItems = items.filter(item => item.isRegularItem());
+    const syncableItems = regularItems.filter(item => !item.hasTag(config.noSyncTag));
+    const wantedItems = syncableItems.filter(item => getPref("syncPreference") === "auto" || (getPref("syncPreference") === "semi-auto" && item.hasTag(config.itemTag))); //TODO: Needs more robust handling, currently assumes that synced_tag as the ground truth
+    // return wantedItems.slice(0, 10);
+    return wantedItems;
+}
+
+
+/**
+ * Syncs all items in the user's library with BibSonomy (that are wanted for syncing), whilst providing progress and error reporting via callbacks.
+ * @param totalItemsCallback - A callback function that is called with the total number of items to sync.
+ * @param progressCallback - A callback function that is called with the current progress of the sync.
+ * @param errorCallback - A callback function that is called when an error occurs during the sync.
+ * @returns A promise that resolves to an array of errors that occurred during the sync.
+ */
+async function performFullLibrarySync(
     totalItemsCallback: (totalItems: number) => void,
     progressCallback: (progress: number, message: string) => void,
     errorCallback: (error: { item: any; error: Error }) => void
 ): Promise<Array<{ item: any; error: Error }>> {
-    const libraryID = Zotero.Libraries.userLibraryID;
-    const items = await Zotero.Items.getAll(libraryID, true, false);
-    const regularItems = items.filter(item => item.isRegularItem());
-
-    const totalItems = regularItems.length;
+    const syncItems = await getItemsToSync();
+    const totalItems = syncItems.length;
+    ztoolkit.log(`Total items to sync: ${totalItems}`);
     const errors: Array<{ item: Zotero.Item; error: Error }> = [];
+    const concurrentLimit = 5; // Number of items to process concurrently
 
     totalItemsCallback(totalItems);
-
     ztoolkit.log("Starting sync process");
+
+    let syncedCount = 0;
+    let activePromises: Promise<void>[] = [];
+
     for (let i = 0; i < totalItems; i++) {
-        const item = regularItems[i];
-        try {
-            // Simulate syncing process
-            await new Promise(resolve => setTimeout(resolve, 100));
+        const item = syncItems[i];
+        const promise = syncItem(item)
+            .then(() => {
+                syncedCount++;
+                const progress = syncedCount / totalItems;
+                progressCallback(progress, getString("initial-sync-progress", { args: { synced: syncedCount, total: totalItems } }));
+            })
+            .catch(error => {
+                const errorInfo = { item, error: error as Error };
+                errors.push(errorInfo);
+                errorCallback(errorInfo);
+            })
+            .finally(() => {
+                // Remove this promise from activePromises when it's done
+                activePromises = activePromises.filter(p => p !== promise);
+            });
 
-            // Simulate errors (10% chance)
-            if (Math.random() < 0.1) {
-                throw new Error(`Failed to sync: ${['Network error', 'API timeout', 'Invalid data', 'A super long error message that should be truncated'][Math.floor(Math.random() * 4)]}`);
-            }
+        activePromises.push(promise);
 
-            const progress = (i + 1) / totalItems;
-            progressCallback(progress, getString("initial-sync-progress", { args: { synced: i + 1, total: totalItems } }));
-        } catch (error) {
-            const errorInfo = { item: item, error: error as Error };
-            errors.push(errorInfo);
-            errorCallback(errorInfo);
+        if (activePromises.length >= concurrentLimit) {
+            // Wait for at least one promise to finish before continuing
+            await Promise.race(activePromises);
         }
     }
+
+    // Wait for any remaining promises to finish
+    await Promise.all(activePromises);
 
     ztoolkit.log("Sync process completed");
     return errors;
 }
 
-async function performInitialSync(
-    progressCallback: (progress: number, message: string) => void,
-    errorCallback: (error: { item: Zotero.Item; error: Error }) => void
-): Promise<Array<{ item: Zotero.Item; error: Error }>> {
+/**
+ * Cleans the library metadata from all items in the user's library.
+ * Currently only used for testing purposes.
+ */
+async function cleanLibraryMetadata() {
+    ztoolkit.log("Starting library metadata cleaning");
     const libraryID = Zotero.Libraries.userLibraryID;
     const items = await Zotero.Items.getAll(libraryID, true, false);
     const regularItems = items.filter(item => item.isRegularItem());
 
-    let syncedCount = 0;
-    const totalCount = regularItems.length;
-    const errors: Array<{ item: Zotero.Item; error: Error }> = [];
-
-    // progressCallback(0, getString("initial-sync-progress", { args: { synced: syncedCount, total: totalCount } }));
-
     for (const item of regularItems) {
+        const itemId = item.id.toString();
+        if (!acquireLock(itemId)) {
+            ztoolkit.log(`Item ${itemId} is already being processed, skipping cleanup`);
+            continue;
+        }
         try {
-            const { user, apiToken, defaultGroup } = getAuthWithDefaultGroup();
-            // await syncItem(item, user, apiToken, defaultGroup, true);
-            // For debugging: Wait 1 second
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            ztoolkit.log(`Syncing item ${item.getField('title')}`);
-            syncedCount++;
-            progressCallback(syncedCount / totalCount, getString("initial-sync-progress", { args: { synced: syncedCount, total: totalCount } }));
-        } catch (error) {
-            const errorInfo = { item, error: error as Error };
-            errors.push(errorInfo);
-            errorCallback(errorInfo);
+            let changed = false;
+            ztoolkit.log(`Cleaning library metadata for item: ${item.getField('title')}`);
+            // Remove tags
+            if (item.hasTag(config.postTag)) {
+                ztoolkit.log(`Removing tag ${config.postTag} from item: ${item.getField('title')}`);
+                item.removeTag(config.postTag);
+                changed = true;
+            }
+            if (item.hasTag(config.itemTag)) {
+                ztoolkit.log(`Removing tag ${config.itemTag} from item: ${item.getField('title')}`);
+                item.removeTag(config.itemTag);
+                changed = true;
+            }
+
+            if (changed) {
+                await item.saveTx();
+            }
+            // Remove metadata note
+            const noteID = item.getNotes().find(noteID => {
+                const note = Zotero.Items.get(noteID);
+                return note.getNote().includes('BibSonomy Metadata');
+            });
+
+            if (noteID) {
+                ztoolkit.log(`Removing metadata note from item: ${item.getField('title')}`);
+                await Zotero.Items.trashTx([noteID]);
+                ztoolkit.log(`Removed metadata note from item: ${item.getField('title')}`);
+            }
+
+            // Save changes
+            await item.saveTx();
+        } finally {
+            releaseLock(itemId);
         }
     }
 
-    setPref("initialSyncDone", true);
-    return errors;
+    ztoolkit.log("Library metadata cleaning completed");
 }

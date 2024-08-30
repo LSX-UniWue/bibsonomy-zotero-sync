@@ -2,7 +2,7 @@
   <html:link rel="localization" href="__addonRef__-preferences.ftl" />
 </linkset>
 <html:style>
-  #zotero-prefpane-__addonRef__-pref-auth-warning,
+  #zotero-prefpane-__addonRef__-__addonRef__-pref-auth-warning,
   #zotero-prefpane-__addonRef__-auth-check-info{
   font-weight: bold;
   padding: 5px 10px;
@@ -30,6 +30,10 @@
 
   #zotero-prefpane-__addonRef__-content {
   flex: 1;
+  }
+
+  #zotero-prefpane-__addonRef__-debug-group {
+  margin-bottom: 10px;
   }
 
   #zotero-prefpane-__addonRef__-footer {
@@ -114,6 +118,15 @@
           <!-- Additional entries populated dynamically -->
         </menupopup>
       </menulist>
+    </groupbox>
+    <!-- Debug Section (Only visible in development mode)-->
+    <groupbox id="zotero-prefpane-__addonRef__-debug-group" hidden="true">
+      <label>
+        <html:h3 data-l10n-id="pref-debug-title"></html:h3>
+      </label>
+      <hbox align="center">
+        <button id="zotero-prefpane-__addonRef__-clean-library" data-l10n-id="pref-clean-library"></button>
+      </hbox>
     </groupbox>
   </vbox>
   <vbox id="zotero-prefpane-__addonRef__-footer">
