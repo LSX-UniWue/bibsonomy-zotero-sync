@@ -11,33 +11,8 @@ import { getString } from '../utils/locale';
 import { ConflictResolutionError } from '../types/errors';
 import { acquireLock, releaseLock } from '../utils/locks';
 
-export { syncItem, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem, syncAllItems, addAttachmentsSyncdateToItem, performInitialSync, performFullLibrarySync as performSyncWithErrors, cleanLibraryMetadata }
+export { syncItem, deleteItemOnline, checkIfItemIsOnline, getBibsonomyMetadataFromItem, addAttachmentsSyncdateToItem, performFullLibrarySync, cleanLibraryMetadata }
 
-/**
- * Synchronizes all items in the user's library with BibSonomy, that are already online.
- * TODO: Whilst working, this needs optimization and more advanced error handling!
- * @deprecated
- * @returns {Promise<void>} A promise that resolves when the synchronization is complete.
- */
-async function syncAllItems() {
-    const libraryID = Zotero.Libraries.userLibraryID;
-    const items = await Zotero.Items.getAll(libraryID, true, false);
-    const regularItems = items.filter(item => item.isRegularItem());
-
-    ztoolkit.log(`Synchronizing ${regularItems.length} items with BibSonomy`);
-
-    for (const item of regularItems) {
-        if (getPref("syncPreference") !== "auto") {
-            const hashes = getBibsonomyMetadataFromItem(item);
-            ztoolkit.log(`Checking if item ${item.getField('title')} is online with hashes: ${JSON.stringify(hashes)}`);
-            if (hashes.interhash === "" || hashes.intrahash === "") {
-                ztoolkit.log(`Item ${item.getField('title')} does not have a hash, assuming it is not online`);
-                continue;
-            }
-        }
-        await syncItem(item);
-    }
-}
 
 /**
  * Deletes an item from BibSonomy if it is online.
@@ -56,7 +31,7 @@ async function deleteItemOnline(item: Zotero.Item): Promise<void> {
 
     try {
         if (await checkIfItemIsOnline(item)) {
-            await deleteEntry(user, apiToken, hashes.intrahash);
+            await deleteEntry(user, hashes.intrahash);
             ztoolkit.log(`Deleted item ${item.getField('title')} from BibSonomy`);
         } else {
             ztoolkit.log(`Item ${item.getField('title')} is not online, skipping deletion.`);
@@ -72,18 +47,18 @@ async function deleteItemOnline(item: Zotero.Item): Promise<void> {
  * Synchronizes a Zotero item with its BibSonomy Post, posting it if it's not already online,
  * or updating it based on where the most recent changes occurred (online or offline).
  * @param item The Zotero item to be synchronized.
- * @param username The username for authentication.
- * @param apikey The API key for authentication.
- * @param group The group within which the item should be posted or updated.
+ * @param force_update If true, the item will be updated even if the metadata does not indicate an update. (Necessary for some edge cases)
+ * @param await_upload If true, the function will wait for the upload of the attachments to finish.
+ * @param progressCallback A callback function to track upload progress.
  * @returns A promise that resolves to the BibsonomyPost object representing the synchronized item.
  */
-async function syncItem(item: Zotero.Item, force_update: boolean = false): Promise<BibsonomyPost> {
+async function syncItem(item: Zotero.Item, force_update: boolean = false, await_upload: boolean = false, progressCallback?: (message: string, progress: number) => void): Promise<BibsonomyPost> {
     const { user, apiToken, defaultGroup } = getAuthWithDefaultGroup();
     const isOnline = await checkIfItemIsOnline(item);
     let post = null;
     if (!isOnline) {
         ztoolkit.log(`Item ${item.getField('title')} is not online, posting.`);
-        post = await postEntry(item);
+        post = await postEntry(item, await_upload, progressCallback);
     } else {
         ztoolkit.log(`Item ${item.getField('title')} is already online, checking updates.`);
         const hashes = getBibsonomyMetadataFromItem(item);
@@ -102,7 +77,7 @@ async function syncItem(item: Zotero.Item, force_update: boolean = false): Promi
             // Update item online
             ztoolkit.log(`Updating ${item.getField('title')} online.`);
             const updatedAttachments = await getChangedAttachments(item);
-            post = await updateBibsonomyPost(item, updatedAttachments, hashes.intrahash);
+            post = await updateBibsonomyPost(item, updatedAttachments, hashes.intrahash, progressCallback);
         } else {
             // No updates needed
             ztoolkit.log(`No updates for ${item.getField('title')}, skipping.`);
@@ -356,9 +331,9 @@ async function getItemsToSync(): Promise<Zotero.Item[]> {
  * @returns A promise that resolves to an array of errors that occurred during the sync.
  */
 async function performFullLibrarySync(
-    totalItemsCallback: (totalItems: number) => void,
-    progressCallback: (progress: number, message: string) => void,
-    errorCallback: (error: { item: any; error: Error }) => void
+    totalItemsCallback?: (totalItems: number) => void,
+    progressCallback?: (progress: number, message: string) => void,
+    errorCallback?: (error: { item: any; error: Error }) => void
 ): Promise<Array<{ item: any; error: Error }>> {
     const syncItems = await getItemsToSync();
     const totalItems = syncItems.length;
@@ -366,7 +341,7 @@ async function performFullLibrarySync(
     const errors: Array<{ item: Zotero.Item; error: Error }> = [];
     const concurrentLimit = 5; // Number of items to process concurrently
 
-    totalItemsCallback(totalItems);
+    totalItemsCallback && totalItemsCallback(totalItems);
     ztoolkit.log("Starting sync process");
 
     let syncedCount = 0;
@@ -374,16 +349,18 @@ async function performFullLibrarySync(
 
     for (let i = 0; i < totalItems; i++) {
         const item = syncItems[i];
-        const promise = syncItem(item)
+        // We set await_upload to true, as we want to wait for the upload of the attachments to finish
+        // We don't explicitly add another progressCallback for the attachments, as that would get too fine-grained
+        const promise = syncItem(item, false, true)
             .then(() => {
                 syncedCount++;
                 const progress = syncedCount / totalItems;
-                progressCallback(progress, getString("initial-sync-progress", { args: { synced: syncedCount, total: totalItems } }));
+                progressCallback && progressCallback(progress, getString("initial-sync-progress", { args: { synced: syncedCount, total: totalItems } }));
             })
             .catch(error => {
                 const errorInfo = { item, error: error as Error };
                 errors.push(errorInfo);
-                errorCallback(errorInfo);
+                errorCallback && errorCallback(errorInfo);
             })
             .finally(() => {
                 // Remove this promise from activePromises when it's done

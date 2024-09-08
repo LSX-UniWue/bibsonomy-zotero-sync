@@ -15,11 +15,10 @@
 
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
-import { syncItem, deleteItemOnline, syncAllItems, performInitialSync, performSyncWithErrors } from "../modules/synchronizationLogic";
+import { syncItem, deleteItemOnline, performFullLibrarySync } from "../modules/synchronizationLogic";
 import { getPref, setPref, getAuth } from "../utils/prefs";
 import { UnauthorizedError, DuplicateItemError, PostNotFoundError, InvalidFormatError, InvalidBibTexError } from '../types/errors';
 import { itemAddedListener, itemModifiedListener, itemDeletedListener } from "../modules/listeners"
-import { DialogHelper } from "zotero-plugin-toolkit/dist/helpers/dialog";
 import { acquireLock, releaseLock } from '../utils/locks';
 
 /**
@@ -197,8 +196,9 @@ export class UIFactory {
 export class HelperFactory {
 
     static async syncAllEntries() {
-        //TODO: Replace with performFullLibrarySync
-        await syncAllItems();
+        // TODO: For now this is a no-op. 
+        // In the future this should be called rather frequently to keep the library in sync, however for this more optimization is needed
+        // await performFullLibrarySync();
     }
 
     private static async getSelectedItem(): Promise<Zotero.Item> {
@@ -218,25 +218,39 @@ export class HelperFactory {
         }
 
         const progressWindow = new ztoolkit.ProgressWindow(config.addonName);
-        if (isUpdate) {
-            progressWindow.createLine({
-                text: getString("progress-update-entry-text", { args: { title: item.getField("title") } }),
-                type: "success",
-            });
-        } else {
-            progressWindow.createLine({
-                text: getString("progress-sync-entry-text", { args: { title: item.getField("title") } }),
-                type: "success",
-            });
-        }
-        progressWindow.show(1000);
+        progressWindow.createLine({
+            text: isUpdate
+                ? getString("progress-update-entry-text", { args: { title: item.getField("title") } })
+                : getString("progress-sync-entry-text", { args: { title: item.getField("title") } }),
+            type: "default",
+            progress: 0
+        });
+        progressWindow.show(-1);  // Show indefinitely
 
         try {
             const { user } = getAuth();
-            const post = await syncItem(item, force_update);
+            const post = await syncItem(item, force_update, false, (message: string, progress: number) => {
+                progressWindow.changeLine({
+                    text: message,
+                    progress: progress
+                });
+                if (progress === 100) {
+                    progressWindow.changeLine({
+                        text: getString("progress-sync-complete", { args: { title: item.getField("title") } }),
+                        type: "success",
+                    });
+                    progressWindow.startCloseTimer(3000);
+                }
+            });
+
             return `${Zotero[config.addonInstance].data.baseURL}/bibtex/${post.bibtex.interhash}/${user}`;
         } catch (error: any) {
+            progressWindow.changeLine({
+                text: getString("progress-sync-error"),
+                type: "error",
+            });
             this.handleError(error, "sync");
+            progressWindow.startCloseTimer(5000);
             return "";
         } finally {
             releaseLock(itemId);
@@ -306,7 +320,7 @@ export class HelperFactory {
             loadCallback: async () => {
                 ztoolkit.log("Load callback started");
                 try {
-                    const errors = await performSyncWithErrors(
+                    const errors = await performFullLibrarySync(
                         (totalItems) => {
                             dialogData.totalCount = totalItems;
                         },
@@ -492,6 +506,7 @@ export class HelperFactory {
         }
 
         function showErrorHelp(error: Error) {
+            //TODO: Replace this with a proper help dialog (add link to the issue tracker and help mail address)
             const helpMessage = getErrorHelpMessage(error);
             ztoolkit.getGlobal("alert")(helpMessage);
         }
@@ -506,6 +521,8 @@ export class HelperFactory {
                 return getString("progress-error-help-message-invalid-format");
             } else if (error instanceof InvalidBibTexError) {
                 return getString("progress-error-help-message-invalid-bibtex");
+            } else if (error instanceof DuplicateItemError) {
+                return getString("progress-error-help-message-duplicate-item");
             } else {
                 return getString("progress-error-help-message-unexpected");
             }

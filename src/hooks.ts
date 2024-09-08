@@ -30,8 +30,7 @@ async function onStartup() {
   if (syncPreference === "auto" && !initialSyncDone) {
     await HelperFactory.performInitialSync();
   } else if (syncPreference === "auto") {
-    //TODO: Change this back!!!!
-    // HelperFactory.syncAllEntries();
+    HelperFactory.syncAllEntries();
   }
 
   await onMainWindowLoad(window);

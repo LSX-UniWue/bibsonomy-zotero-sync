@@ -10,28 +10,37 @@
  * All API interactions should happen through these functions.
  */
 
-import { UnauthorizedError, DuplicateItemError, PostNotFoundError, InvalidFormatError, InvalidBibTexError } from '../types/errors';
+import * as errors from '../types/errors';
 import { config } from "../../package.json";
 import { createBibsonomyPostFromItem } from './dataTransformers';
 import { getString } from '../utils/locale';
 import { addAttachmentsSyncdateToItem } from './synchronizationLogic';
-import { getAuth, getAuthWithDefaultGroup } from '../utils/prefs';
+import { getAuth, getAuthWithDefaultGroup, getPref } from '../utils/prefs';
 
 
-export { postEntry, updateBibsonomyPost, getEntry, deleteEntry, uploadAllFilesToEntry, uploadFileToEntry, deleteAllFilesFromEntry, deleteFileFromEntry, handleHttpResponseError };
+export { postEntry, updateBibsonomyPost, getEntry, deleteEntry, uploadFileToEntry, deleteAllFilesFromEntry, handleHttpResponseError };
 
 // Necessary due to the way Zotero handles imports
 Components.utils.importGlobalProperties(['FormData']);
 
 
 /**
- * Makes a request to the BibSonomy API.
- * @param method - The HTTP method to use for the request ('POST' or 'PUT').
+ * Wrapper function to make a request to the BibSonomy API. 
+ * Uses the auth credentials from the preferences.
+ * Parses any response errors and throws them as custom errors.
+ * @param method - The HTTP method to use for the request ('POST', 'PUT', or 'GET').
  * @param url - The URL to send the request to.
- * @param data - The data to send in the request body.
+ * @param data - (optional) The data to send in the request body.
  * @returns A promise that resolves to the response from the Bibsonomy API.
  */
-async function makeBibsonomyRequest(method: 'POST' | 'PUT', url: string, data: any): Promise<BibSonomyPostResponse> {
+async function makeBibsonomyRequest(method: 'POST' | 'PUT' | 'GET' | 'DELETE', url: string, data?: any): Promise<Response> {
+    if (!url.startsWith(Zotero[config.addonInstance].data.baseURL)) {
+        throw new Error(`Invalid URL: ${url}`);
+    }
+    if (method === 'GET' && data) {
+        throw new Error(`GET request with data is not allowed`);
+    }
+
     const { user, apiToken } = getAuth();
     const response = await fetch(url, {
         method: method,
@@ -39,94 +48,146 @@ async function makeBibsonomyRequest(method: 'POST' | 'PUT', url: string, data: a
             'Content-Type': 'application/json',
             'Authorization': 'Basic ' + btoa(user + ':' + apiToken)
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data) || undefined
     });
     if (!response.ok) {
         await handleHttpResponseError(response, method, url);
     }
+    return response;
+}
+
+/**
+ * Handles the error response from a BibSonomy HTTP request.
+ * @param response - The response object from the HTTP request.
+ * @param method - The HTTP method used for the request (optional).
+ * @param url - The URL of the request (optional).
+ * @throws Various error types based on the response status and error message.
+ */
+async function handleHttpResponseError(response: Response, method?: string, url?: string): Promise<void> {
+    if (method && url) {
+        ztoolkit.log(`Error in ${method} request to URL: ${url} with status: ${response.status}`);
+    } else {
+        ztoolkit.log(`Error in request to URL: ${response.url} with status: ${response.status}`);
+    }
+
+    let errorMessage = "Unknown error";
+    try {
+        const errorResponse = await response.json() as { error?: string };
+        errorMessage = errorResponse.error || errorMessage;
+    } catch (e) {
+        errorMessage = await response.text() || errorMessage;
+    }
+
+    const lowerCaseErrorMessage = errorMessage.toLowerCase();
+
+    switch (response.status) {
+        case 400:
+            if (lowerCaseErrorMessage.includes("error decoding authorization header")) {
+                throw new errors.UnauthorizedError(errorMessage);
+            }
+            if (lowerCaseErrorMessage.includes("duplicate post detected") ||
+                lowerCaseErrorMessage.startsWith("could not create new bibtex: this bibtex already exists in your collection")) {
+                throw new errors.DuplicateItemError(errorMessage);
+            }
+            if (lowerCaseErrorMessage.includes("identical hash")) {
+                throw new errors.DuplicateItemError(errorMessage);
+            }
+            if (lowerCaseErrorMessage.includes("missing field")) {
+                throw new errors.InvalidBibTexError(errorMessage);
+            }
+            if (lowerCaseErrorMessage.includes("invalid model")) {
+                throw new errors.InvalidModelError(errorMessage);
+            }
+            if (lowerCaseErrorMessage.startsWith("invalid bibtex")) {
+                throw new errors.InvalidBibTexError(errorMessage);
+            }
+            if (lowerCaseErrorMessage.includes("start must be less than or equal end")) {
+                throw new errors.InvalidRangeError(errorMessage);
+            }
+            if (lowerCaseErrorMessage.includes("only chuck norris can send content of another media type than he accepts")) {
+                throw new errors.UnsupportedMediaTypeError(errorMessage);
+            }
+            throw new errors.BadRequestError(errorMessage);
+        case 401:
+            throw new errors.UnauthorizedError("Authentication failure");
+        case 403:
+            throw new errors.ForbiddenError(errorMessage);
+        case 404:
+            throw new errors.ResourceNotFoundError(errorMessage);
+        case 415:
+            throw new errors.UnsupportedMediaTypeError(errorMessage);
+        case 500:
+            throw new errors.InternalServerError(errorMessage);
+        case 503:
+            throw new errors.ServiceUnavailableError(errorMessage);
+        default:
+            throw new errors.UnexpectedAPIError(`Unexpected API error: ${response.status} ${response.statusText} - ${errorMessage}`);
+    }
+}
+
+/**
+ * Parses a post response from the BibSonomy API.
+ * Post-Responses do NOT return a publication, but only a resourcehash and status!
+ * @param response - The response object from the HTTP request.
+ * @returns A promise that resolves to the parsed response data.
+ */
+async function parsePostResponseData(response: Response): Promise<BibSonomyPostResponse> {
     try {
         const data = await response.json();
         if (!data || typeof data !== 'object' || !('resourcehash' in data)) {
-            throw new InvalidFormatError('Unexpected response format from Bibsonomy API');
+            throw new errors.InvalidFormatError('Unexpected response format from Bibsonomy API');
         }
         return data as unknown as BibSonomyPostResponse;
     } catch (error) {
         if (error instanceof SyntaxError) {
-            throw new InvalidFormatError('Failed to parse Bibsonomy API response: ' + JSON.stringify(data));
+            throw new errors.InvalidFormatError('Failed to parse Bibsonomy API response: ' + JSON.stringify(response));
         }
         throw error;
     }
 }
 
 /**
- * Posts an entry to Bibsonomy.
- * 
- * @param item - The Zotero item to be posted.
- * @returns A promise that resolves to the posted Bibsonomy entry.
- */
-async function postEntry(item: Zotero.Item): Promise<BibsonomyPost> {
-    const { user, apiToken, defaultGroup } = getAuthWithDefaultGroup();
-    const post = createBibsonomyPostFromItem(item, user, defaultGroup);
-    ztoolkit.log(`Posting entry: ${JSON.stringify(post)}`);
-    const responseText = await makeBibsonomyRequest('POST', `${Zotero[config.addonInstance].data.baseURL}/api/users/${user}/posts`, { "post": post });
-    // We don't wait for the function to finish, as this can take quite some time and doesn't need to be synchronous
-    uploadAllFilesToEntry(user, apiToken, responseText.resourcehash!, item);
-    return getEntry(responseText.resourcehash) as Promise<BibsonomyPost>;
-}
-
-
-/**
- * Fetches a BibSonomy entry with the specified resourcehash.
+ * Fetches a BibSonomy entry with the specified resourcehash, parsing the response and throwing errors for invalid responses.
  * @param resourcehash - The resourcehash of the entry to fetch.
  * @returns A Promise that resolves to the fetched BibSonomy post.
  */
 async function getEntry(resourcehash: string): Promise<BibsonomyPost> {
     ztoolkit.log(`Fetching BibSonomy entry with resourcehash: ${resourcehash}`);
-    const { user, apiToken } = getAuth();
+
+    const user = getPref("username");
     const url = `${Zotero[config.addonInstance].data.baseURL}/api/users/${user}/posts/${resourcehash}?format=json`;
-    const response = await fetch(url, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Basic ' + btoa(user + ':' + apiToken)
-        }
-    });
-
-    if (!response.ok) {
-        await handleHttpResponseError(response, 'GET', url);
+    const response = await makeBibsonomyRequest('GET', url);
+    if (!response || typeof response !== 'object' || !('post' in response)) {
+        throw new errors.InvalidFormatError('Unexpected response format from Bibsonomy API: ' + JSON.stringify(response));
     }
-
-    const data = await response.json();
-    if (!data || typeof data !== 'object' || !('post' in data)) {
-        throw new InvalidFormatError('Unexpected response format from Bibsonomy API: ' + JSON.stringify(data));
-    }
-    return data.post as BibsonomyPost;
+    return response.post as BibsonomyPost;
 }
 
 /**
- * Deletes an entry from BibSonomy.
+ * Posts an entry to Bibsonomy.
  * 
- * @param username - The BibSonomy username.
- * @param apikey - The BibSonomy API key.
- * @param intrahash - The intrahash of the entry to delete.
- * @throws {Error} If the deletion fails.
+ * @param item - The Zotero item to be posted.
+ * @param await_upload - Whether to wait for the upload to finish.
+ * @param progressCallback - A callback function to track upload progress.
+ * @returns A promise that resolves to the posted Bibsonomy entry.
  */
-async function deleteEntry(username: string, apikey: string, intrahash: string): Promise<void> {
-    const url = `${Zotero[config.addonInstance].data.baseURL}/api/users/${username}/posts/${intrahash}`;
-
-    const response = await fetch(url, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Basic ' + btoa(username + ':' + apikey)
-        },
-    });
-
-    if (!response.ok) {
-        await handleHttpResponseError(response, 'DELETE', url);
+async function postEntry(item: Zotero.Item, await_upload: boolean = false, progressCallback?: (message: string, progress: number) => void): Promise<BibsonomyPost> {
+    const { user, apiToken, defaultGroup } = getAuthWithDefaultGroup();
+    const post = createBibsonomyPostFromItem(item, user, defaultGroup);
+    ztoolkit.log(`Posting entry: ${JSON.stringify(post)}`);
+    const response = await makeBibsonomyRequest('POST', `${Zotero[config.addonInstance].data.baseURL}/api/users/${user}/posts`, { "post": post });
+    const responseText = await parsePostResponseData(response);
+    // We usually don't wait for the function to finish, as this can take quite some time and doesn't need to be synchronous
+    // However, in some cases (e.g. the initial sync) we want to wait for the upload to finish
+    if (!await_upload) {
+        uploadAllFilesToEntry(user, responseText.resourcehash!, item, progressCallback);
+    } else {
+        ztoolkit.log(`Waiting for upload of entry: ${responseText.resourcehash}`);
+        await uploadAllFilesToEntry(user, responseText.resourcehash!, item, progressCallback);
     }
-
-    ztoolkit.log(`Successfully deleted entry with intrahash: ${intrahash}`);
+    return getEntry(responseText.resourcehash) as Promise<BibsonomyPost>;
 }
+
 
 /**
  * Updates a Bibsonomy post with the given item, intrahash, username, apikey, and group.
@@ -135,11 +196,12 @@ async function deleteEntry(username: string, apikey: string, intrahash: string):
  * @param intrahash - The intrahash of the Bibsonomy post.
  * @returns A promise that resolves to the updated Bibsonomy post.
  */
-async function updateBibsonomyPost(item: Zotero.Item, updatedAttachments: Zotero.Item[], intrahash: string): Promise<BibsonomyPost> {
+async function updateBibsonomyPost(item: Zotero.Item, updatedAttachments: Zotero.Item[], intrahash: string, progressCallback?: (message: string, progress: number) => void): Promise<BibsonomyPost> {
     const { user, apiToken, defaultGroup } = getAuthWithDefaultGroup();
     const post = createBibsonomyPostFromItem(item, user, defaultGroup);
     const url = `${Zotero[config.addonInstance].data.baseURL}/api/users/${user}/posts/${intrahash}?format=json`;
-    const responseText = await makeBibsonomyRequest('PUT', url, { "post": post });
+    const response = await makeBibsonomyRequest('PUT', url, { "post": post });
+    const responseText = await parsePostResponseData(response);
 
     const currentEntry = await getEntry(responseText.resourcehash);
     const currentAttachments = currentEntry.documents?.document || [];
@@ -162,8 +224,8 @@ async function updateBibsonomyPost(item: Zotero.Item, updatedAttachments: Zotero
             const filename = (attachment as any).getFilename();
             const onlineAttachment = currentAttachments.find(att => att.filename === filename);
             if (onlineAttachment) {
-                await deleteFileFromEntry(user, apiToken, onlineAttachment.href);
-                await uploadFileToEntry(user, apiToken, responseText.resourcehash, attachment.id);
+                await makeBibsonomyRequest('DELETE', onlineAttachment.href);
+                await uploadFileToEntry(user, responseText.resourcehash, attachment.id);
             }
         }
     } else if ([...allItemFilenames].every(filename => !onlineFilenames.has(filename)) &&
@@ -173,42 +235,55 @@ async function updateBibsonomyPost(item: Zotero.Item, updatedAttachments: Zotero
         // Delete files that are no longer present locally
         for (const onlineAttachment of currentAttachments) {
             if (!allItemFilenames.has(onlineAttachment.filename)) {
-                await deleteFileFromEntry(user, apiToken, onlineAttachment.href);
+                await makeBibsonomyRequest('DELETE', onlineAttachment.href);
             }
         }
         // Upload new files
         for (const attachment of allItemAttachments) {
             const filename = (attachment as any).getFilename();
             if (!onlineFilenames.has(filename)) {
-                await uploadFileToEntry(user, apiToken, responseText.resourcehash, attachment.id);
+                await uploadFileToEntry(user, responseText.resourcehash, attachment.id);
             }
         }
     } else {
         // Case 3: Ambiguous filenames, use (inefficient) fallback
         ztoolkit.log(`Ambiguous filenames, use (inefficient) fallback`);
-        await deleteAllFilesFromEntry(user, apiToken, responseText.resourcehash);
-        await uploadAllFilesToEntry(user, apiToken, responseText.resourcehash, item);
+        await deleteAllFilesFromEntry(responseText.resourcehash);
+        await uploadAllFilesToEntry(user, responseText.resourcehash, item, progressCallback);
     }
 
     return getEntry(responseText.resourcehash) as Promise<BibsonomyPost>;
 }
 
+/**
+ * Deletes an entry from BibSonomy.
+ * 
+ * @param username - The BibSonomy username.
+ * @param intrahash - The intrahash of the entry to delete.
+ * @throws {Error} If the deletion fails.
+ */
+async function deleteEntry(username: string, intrahash: string): Promise<void> {
+    const url = `${Zotero[config.addonInstance].data.baseURL}/api/users/${username}/posts/${intrahash}?format=json`;
+    await makeBibsonomyRequest('DELETE', url);
+    ztoolkit.log(`Successfully deleted entry with intrahash: ${intrahash}`);
+}
 
 /**
  * Uploads all files attached to a Zotero item to a specific entry in BibSonomy.
  * 
  * @param username - The username for the BibSonomy API.
- * @param apikey - The API key for the BibSonomy API.
  * @param resourcehash - The resource hash of the BibSonomy entry.
  * @param item - The Zotero item containing the attachments to upload.
  */
-async function uploadAllFilesToEntry(username: string, apikey: string, resourcehash: string, item: Zotero.Item) {
+async function uploadAllFilesToEntry(username: string, resourcehash: string, item: Zotero.Item, progressCallback?: (message: string, progress: number) => void) {
     const attachments = item.getAttachments();
-    const popup = new ztoolkit.ProgressWindow(config.addonName).createLine({
-        text: getString("progress-upload-files-text", { args: { title: item.getField('title') } }),
-        progress: 0
-    }).show(-1);
+    //TODO: This should be replaced with a callback, as in the initial sync to keep frontend and backend decoupled
+    // const popup = show_upload_progress ? new ztoolkit.ProgressWindow(config.addonName).createLine({
+    //     text: getString("progress-upload-files-text", { args: { title: item.getField('title') } }),
+    //     progress: 0
+    // }).show(-1) : null;
 
+    progressCallback?.(getString("progress-upload-files-text", { args: { title: item.getField('title') } }), 0);
     let count = 0;
     for (const attachmentID of attachments) {
         try {
@@ -217,73 +292,60 @@ async function uploadAllFilesToEntry(username: string, apikey: string, resourceh
             // Skip non-attachment items and non-PDF files
             if (!attachment.isAttachment() || typeof attachment.getFilePath() !== 'string' || (attachment.getFilePath() as string).split('.').pop() !== 'pdf') continue;
 
-            await uploadFileToEntry(username, apikey, resourcehash, attachmentID);
+            await uploadFileToEntry(username, resourcehash, attachmentID);
             count++;
-            popup.changeLine({
-                text: `Uploaded: ${attachment.getField('title')}`,
-                progress: count / attachments.length
-            });
+            // popup?.changeLine({
+            //     text: `Uploaded: ${attachment.getField('title')}`,
+            //     progress: count / attachments.length
+            // });
+            progressCallback?.(getString("progress-upload-files-text", { args: { title: item.getField('title') } }), count / attachments.length);
         } catch (error: any) {
             ztoolkit.log(`Error uploading file ${attachmentID}: ${error}`);
             throw error;
         }
     }
     addAttachmentsSyncdateToItem(item, new Date().toISOString());
-    popup.close();
+    // popup?.close();
 }
 
 
 /**
  * Uploads a file attachment to a BibSonomy entry.
  * @param username - The username of the BibSonomy user.
- * @param apikey - The API key of the BibSonomy user.
  * @param resourcehash - The hash of the BibSonomy resource.
  * @param attachmentID - The ID of the attachment to upload.
  */
-async function uploadFileToEntry(username: string, apikey: string, resourcehash: string, attachmentID: number) {
-    try {
-        const attachment = Zotero.Items.get(attachmentID);
-        if (!attachment.isAttachment()) return;
+async function uploadFileToEntry(username: string, resourcehash: string, attachmentID: number) {
+    const attachment = Zotero.Items.get(attachmentID);
+    if (!attachment.isAttachment()) return;
 
-        const path = await attachment.getFilePathAsync() as string;
-        const file = Zotero.File.pathToFile(path);
-        const data = await IOUtils.read(path);
-        const blob = new Blob([data], { type: 'application/octet-stream' });
+    const path = await attachment.getFilePathAsync() as string;
+    const file = Zotero.File.pathToFile(path);
+    const data = await IOUtils.read(path);
+    const blob = new Blob([data], { type: 'application/octet-stream' });
 
-        const multipart = new FormData();
-        multipart.append('file', blob, file.leafName);
+    const multipart = new FormData();
+    multipart.append('file', blob, file.leafName);
 
-        const url = `${Zotero[config.addonInstance].data.baseURL}/api/users/${username}/posts/${resourcehash}/documents?format=json`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Authorization': 'Basic ' + btoa(username + ':' + apikey) },
-            body: multipart
-        });
-
-        if (!response.ok) handleHttpResponseError(response, 'POST', url);
-        ztoolkit.log(`File uploaded successfully: ${file.leafName}`);
-    } catch (error: any) {
-        ztoolkit.log(`Error uploading file ${attachmentID}: ${error}`);
-        throw error;
-    }
+    const url = `${Zotero[config.addonInstance].data.baseURL}/api/users/${username}/posts/${resourcehash}/documents?format=json`;
+    await makeBibsonomyRequest('POST', url, multipart);
+    ztoolkit.log(`File uploaded successfully: ${file.leafName}`);
 }
 
 
 /**
  * Deletes all files from an entry in BibSonomy.
  * 
- * @param username - The username of the BibSonomy user.
- * @param apikey - The API key of the BibSonomy user.
  * @param resourcehash - The resource hash of the entry.
  */
-async function deleteAllFilesFromEntry(username: string, apikey: string, resourcehash: string) {
+async function deleteAllFilesFromEntry(resourcehash: string) {
     try {
         const post = await getEntry(resourcehash);
         const attachments = post.documents?.document || [];
         ztoolkit.log(`Deleting files from entry: ${resourcehash}`, `Attachments: ${JSON.stringify(attachments)}`);
 
         for (const attachment of attachments) {
-            await deleteFileFromEntry(username, apikey, attachment.href);
+            await makeBibsonomyRequest('DELETE', attachment.href);
         }
     } catch (error: any) {
         ztoolkit.log(`Error deleting files from entry: ${resourcehash}`);
@@ -291,66 +353,3 @@ async function deleteAllFilesFromEntry(username: string, apikey: string, resourc
     }
 }
 
-
-/**
- * Deletes a file from an entry on BibSonomy.
- * 
- * @param username - The username for authentication.
- * @param apikey - The API key for authentication.
- * @param documentURL - The URL of the document to delete.
- */
-async function deleteFileFromEntry(username: string, apikey: string, documentURL: string) {
-    try {
-        const response = await fetch(documentURL, {
-            method: 'DELETE',
-            headers: { Authorization: 'Basic ' + btoa(username + ':' + apikey) },
-        });
-
-        if (!response.ok) handleHttpResponseError(response, 'DELETE', documentURL);
-        ztoolkit.log(`File deleted successfully: ${documentURL}`);
-    } catch (error: any) {
-        ztoolkit.log(`Error deleting file ${documentURL}: ${error}`);
-        throw error;
-    }
-}
-
-/**
- * Handles the error response from an BibSonomy HTTP request.
- * @param response - The response object from the HTTP request.
- * @throws {UnauthorizedError} If the response status is 401 (Unauthorized).
- * @throws {DuplicateItemError} If the response status is 400 (Bad Request) and the error message indicates a duplicate item.
- * @throws {PostNotFoundError} If the response status is 404 (Not Found).
- * @throws {Error} If the response status is not one of the above and an unexpected API error occurs.
- */
-async function handleHttpResponseError(response: Response, method?: string, url?: string): Promise<void> {
-    if (method && url) ztoolkit.log(`Error in ${method} request to URL response: ${url} with status: ${response.status}`);
-    else ztoolkit.log(`Error in request to URL response: ${response.url} with status: ${response.status}`);
-    let errorMessage = "Unknown error";
-    try {
-        const errorResponse = await response.json() as { error?: string };
-        errorMessage = errorResponse.error || errorMessage;
-    } catch (e) {
-        // If parsing JSON fails, use the response text if available
-        errorMessage = await response.text() || errorMessage;
-    }
-    switch (response.status) {
-        case 401: throw new UnauthorizedError();
-        case 400:
-            if (errorMessage.startsWith("Could not create new BibTex: This BibTex already exists in your collection")) {
-                ztoolkit.log(`Duplicate item detected: ${errorMessage}`);
-                throw new DuplicateItemError();
-            };
-            if (errorMessage.startsWith("Invalid BibTex")) {
-                ztoolkit.log(`Invalid BibTex detected: ${errorMessage}`);
-                throw new InvalidBibTexError();
-            };
-            ztoolkit.log(`Unexpected API error: ${response.status} ${response.statusText} - ${errorMessage}`);
-            throw new Error(`Unexpected API error: ${response.status} ${response.statusText} - ${errorMessage}`);
-        case 404:
-            ztoolkit.log(`Post not found: ${errorMessage}`);
-            throw new PostNotFoundError();
-        default:
-            ztoolkit.log(`Unexpected API error: ${response.status} ${response.statusText} - ${errorMessage}`);
-            throw new Error(`Unexpected API error: ${response.status} ${response.statusText} - ${errorMessage}`);
-    }
-}

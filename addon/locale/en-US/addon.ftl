@@ -14,6 +14,7 @@ alert-default-group-not-set = Error: Default group not set. Please set a default
 # Progress windows 
 progress-sync-entry-text = Adding publication { $title } to BibSonomy...
 progress-sync-entry-success = Publication synced successfully! (Link copied to clipboard)
+progress-sync-complete = Publication { $title } synced successfully!
 progress-sync-entry-error = Error: Publication could not be synced.
 progress-update-entry-text = Updating publication { $title } on BibSonomy...
 progress-delete-entry-text = Deleting publication { $title } from BibSonomy...
@@ -21,11 +22,12 @@ progress-upload-files-text = Uploading attachments for { $title }
 progress-unauthorized-error = User is not authenticated, skipping sync
 progress-error-help-link = Need help?
 # TODO: Write actually helpful messages
-progress-error-help-message-unauthorized = This error might be due to network connectivity issues. Please check your internet connection and try again.
-progress-error-help-message-post-not-found = This error might be due to network connectivity issues. Please check your internet connection and try again.
-progress-error-help-message-invalid-format = This error might be due to network connectivity issues. Please check your internet connection and try again.
+progress-error-help-message-unauthorized = It seems like your BibSonomy credentials are not valid. Please check your credentials in the preferences and try again.
+progress-error-help-message-post-not-found = The publication you are trying to sync seems to be not available on BibSonomy. Please check the publication and try again.
+progress-error-help-message-invalid-format = The format of the item you are trying to sync seems to be invalid BibTex. Please check the item and try again.
 progress-error-help-message-unexpected = An unexpected error occurred. Please try again or file an issue at https://github.com/zotero-bibsonomy/zotero-bibsonomy/issues.
 progress-error-help-message-invalid-bibtex = The BibTeX you are trying to sync is invalid. Please check the BibTeX and try again.
+progress-error-help-message-duplicate-item = Another publication with the same BibTeX key already exists in your BibSonomy account. Please check the publication and try again.
 
 # Delete confirmation dialog
 dialog-delete-confirm-title = Confirm Online Deletion
