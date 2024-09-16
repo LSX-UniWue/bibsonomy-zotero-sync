@@ -37,7 +37,7 @@
   },
   "homepage": "https://github.com/LSX-UniWue/bibsonomy-zotero-sync#readme",
   "dependencies": {
-    "zotero-plugin-toolkit": "^2.3.26",
+    "zotero-plugin-toolkit": "^3.0.4",
     "emoji-dictionary": "^1.0.1"
   },
   "devDependencies": {
